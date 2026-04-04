@@ -1,30 +1,79 @@
-# Free eCommerce Template for Next.js - NextMerce
+# CD-WEB-FE
 
-The free Next.js eCommerce template is a lite version of the NextMerce Next.js eCommerce boilerplate, designed to streamline the launch and management of your online store.
+Frontend eCommerce sử dụng Next.js (App Router), TypeScript và Tailwind CSS.
 
-![NextMerce](https://github.com/user-attachments/assets/57155689-a756-4222-8af7-134e556acae2)
+## Yeu cau he thong
 
+- Node.js 20.x (khuyen nghi)
+- npm 10+
 
-While NextMerce Pro features advanced functionalities, seamless integration, and customizable options, providing all the essential tools needed to build and expand your business, the lite version offers a basic Next.js template specifically crafted for eCommerce websites. Both versions ensure superior performance and flexibility, all powered by Next.js.
+## Cai dat va chay local
 
-### NextMerce Free VS NextMerce Pro
+1. Cai dependencies
 
-| ✨ Features                         | 🎁 NextMerce Free                 | 🔥 NextMerce Pro                        |
-|----------------------------------|--------------------------------|--------------------------------------|
-| Next.js Pages                    | Static                         | Dynamic Boilerplate Template         |
-| Components                       | Limited                        | All According to Demo                |
-| eCommerce Functionality          | Included                       | Included                             |
-| Integrations (DB, Auth, etc.)    | Not Included                   | Included                             |
-| Community Support                | Included                       | Included                             |
-| Premium Email Support            | Not Included                   | Included                             |
-| Lifetime Free Updates            | Included                       | Included                             |
+```bash
+npm ci
+```
 
+2. Chay moi truong development
 
-#### [🚀 Live Demo](https://demo.nextmerce.com/)
+```bash
+npm run dev
+```
 
-#### [🌐 Visit Website](https://nextmerce.com/)
+3. Mo trinh duyet tai dia chi
 
-## Update Logs
+```text
+http://localhost:3000
+```
 
-Version 0.1.2 - [Mar 16, 2026]
-- Update Next.js, React, and React DOM dependencies, add baseline-browser-mapping
+## Scripts chinh
+
+- `npm run dev`: chay local
+- `npm run lint`: kiem tra lint
+- `npm run build`: build production
+- `npm run start`: chay ban build production
+
+## Cau truc thu muc
+
+- `src/app`: route va layout theo App Router
+- `src/components`: cac UI component theo module
+- `src/redux`: store va slices
+- `src/types`: dinh nghia kieu du lieu
+- `public/images`: tai nguyen hinh anh
+
+## Quy trinh Git de xuat
+
+1. Tao nhanh moi tu `main`
+2. Mo Pull Request ve `main`
+3. CI se tu dong chay lint va build
+4. Merge khi CI xanh
+
+## CI/CD
+
+Repo da duoc cau hinh GitHub Actions tai `.github/workflows/ci.yml` voi 2 buoc:
+
+- `npm run lint`
+- `npm run build`
+
+Workflow se chay khi:
+
+- Push len nhanh `main`
+- Tao/cap nhat Pull Request vao `main`
+
+## Bien moi truong
+
+Neu du an can bien moi truong, tao file `.env.local` o thu muc goc. File nay da duoc bo qua boi git.
+
+## Trang thai repository
+
+- Remote: `origin` -> `https://github.com/HoangKhangKhuPho4/CD-WEB-FE.git`
+- Nhanh mac dinh: `main`
+
+## Thông tin dự án
+
+**Đề tài:** Website Thương Mại Điện Tử
+
+**Nhóm thực hiện:**
+- 22130116 - Nguyễn Lê Hoàng Khang
+- 22130025 - Phạm Thái Bảo
