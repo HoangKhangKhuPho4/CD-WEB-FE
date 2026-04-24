@@ -4,10 +4,22 @@ import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import AddressModal from "./AddressModal";
 import Orders from "../Orders";
+import { useAppSelector } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { logout } from "@/redux/features/auth-slice";
+import { useRouter } from "next/navigation";
 
 const MyAccount = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [addressModal, setAddressModal] = useState(false);
+  const { user } = useAppSelector((state) => state.authReducer);
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push("/signin");
+  };
 
   const openAddressModal = () => {
     setAddressModal(true);
@@ -39,9 +51,9 @@ const MyAccount = () => {
 
                   <div>
                     <p className="font-medium text-dark mb-0.5">
-                      James Septimus
+                      {user?.name || "User Name"}
                     </p>
-                    <p className="text-custom-xs">Member Since Sep 2020</p>
+                    <p className="text-custom-xs">Member Since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</p>
                   </div>
                 </div>
 
@@ -219,7 +231,7 @@ const MyAccount = () => {
                     </button>
 
                     <button
-                      onClick={() => setActiveTab("logout")}
+                      onClick={handleLogout}
                       className={`flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 hover:bg-blue hover:text-white ${
                         activeTab === "logout"
                           ? "text-white bg-blue"
@@ -261,13 +273,13 @@ const MyAccount = () => {
               }`}
             >
               <p className="text-dark">
-                Hello Annie (not Annie?
-                <a
-                  href="#"
-                  className="text-red ease-out duration-200 hover:underline"
+                Hello {user?.name} (not {user?.name}?
+                <button
+                  onClick={handleLogout}
+                  className="text-red ease-out duration-200 hover:underline ml-1"
                 >
                   Log Out
-                </a>
+                </button>
                 )
               </p>
 
@@ -357,7 +369,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Name: James Septimus
+                      Name: {user?.name}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -376,7 +388,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Email: jamse@example.com
+                      Email: {user?.email}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -405,7 +417,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Phone: 1234 567890
+                      Phone: {user?.phone || "N/A"}
                     </p>
 
                     <p className="flex gap-2.5 text-custom-sm">
@@ -431,7 +443,7 @@ const MyAccount = () => {
                           </clipPath>
                         </defs>
                       </svg>
-                      Address: 7398 Smoke Ranch RoadLas Vegas, Nevada 89128
+                      Address: {user?.address || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -489,7 +501,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Name: James Septimus
+                      Name: {user?.name}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -508,7 +520,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Email: jamse@example.com
+                      Email: {user?.email}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -537,7 +549,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Phone: 1234 567890
+                      Phone: {user?.phone || "N/A"}
                     </p>
 
                     <p className="flex gap-2.5 text-custom-sm">
@@ -563,7 +575,7 @@ const MyAccount = () => {
                           </clipPath>
                         </defs>
                       </svg>
-                      Address: 7398 Smoke Ranch RoadLas Vegas, Nevada 89128
+                      Address: {user?.address || "N/A"}
                     </p>
                   </div>
                 </div>

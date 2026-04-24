@@ -17,6 +17,7 @@ const Header = () => {
   const { openCartModal } = useCartModalContext();
 
   const product = useAppSelector((state) => state.cartReducer.items);
+  const { user, isAuthenticated } = useAppSelector((state) => state.authReducer);
   const totalPrice = useSelector(selectTotalPrice);
 
   const handleOpenCartModal = () => {
@@ -158,7 +159,10 @@ const Header = () => {
 
             <div className="flex w-full lg:w-auto justify-between items-center gap-5">
               <div className="flex items-center gap-5">
-                <Link href="/signin" className="flex items-center gap-2.5">
+                <Link 
+                  href={isAuthenticated ? "/my-account" : "/signin"} 
+                  className="flex items-center gap-2.5"
+                >
                   <svg
                     width="24"
                     height="24"
@@ -182,10 +186,10 @@ const Header = () => {
 
                   <div>
                     <span className="block text-2xs text-dark-4 uppercase">
-                      account
+                      {isAuthenticated ? "Welcome" : "account"}
                     </span>
-                    <p className="font-medium text-custom-sm text-dark">
-                      Sign In
+                    <p className="font-medium text-custom-sm text-dark truncate max-w-[100px]">
+                      {isAuthenticated ? user?.name : "Sign In"}
                     </p>
                   </div>
                 </Link>
