@@ -19,7 +19,7 @@
     "postcss": "8.4.29",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-hot-toast": "^2.4.1",
+    "react-hot-toast": "^2.6.0",
     "react-range-slider-input": "^3.0.7",
     "react-redux": "^9.2.0",
     "sanity": "^5.16.0",

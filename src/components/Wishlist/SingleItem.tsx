@@ -1,34 +1,63 @@
+"use client";
 import React from "react";
 import { AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
-
-import { removeItemFromWishlist } from "@/redux/features/wishlist-slice";
+import { removeByWishlistId } from "@/redux/features/wishlist-slice";
 import { addItemToCart } from "@/redux/features/cart-slice";
-
+import { WishListItem } from "@/redux/features/wishlist-slice";
 import Image from "next/image";
+import Link from "next/link";
+import toast from "react-hot-toast";
 
-const SingleItem = ({ item }) => {
+const SingleItem = ({ item }: { item: WishListItem }) => {
   const dispatch = useDispatch<AppDispatch>();
 
-  const handleRemoveFromWishlist = () => {
-    dispatch(removeItemFromWishlist(item.id));
+  const productName = item.product?.name || "Sản phẩm";
+  const productPrice = item.product?.price || 0;
+  const productImage =
+    item.product?.images?.[0]?.linkImage || "/images/no-image.png";
+  const variantName = item.variant?.name || "";
+  const createdAt = item.createdAt
+    ? new Date(item.createdAt).toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+    : "";
+
+  const handleRemoveFromWishlist = async () => {
+    try {
+      await dispatch(removeByWishlistId(item.id)).unwrap();
+      toast.success("Đã xóa khỏi danh sách yêu thích");
+    } catch (err: any) {
+      toast.error(err || "Có lỗi xảy ra");
+    }
   };
 
   const handleAddToCart = () => {
     dispatch(
       addItemToCart({
-        ...item,
+        id: item.product?.id,
+        title: productName,
+        price: productPrice,
+        discountedPrice: item.product?.discountedPrice || productPrice,
         quantity: 1,
+        imgs: {
+          thumbnails: [productImage],
+          previews: [productImage],
+        },
       })
     );
+    toast.success("Đã thêm vào giỏ hàng!");
   };
 
   return (
     <div className="flex items-center border-t border-gray-3 py-5 px-10">
+      {/* Remove button */}
       <div className="min-w-[83px]">
         <button
-          onClick={() => handleRemoveFromWishlist()}
-          aria-label="button for remove product from wishlist"
+          onClick={handleRemoveFromWishlist}
+          aria-label="Xóa sản phẩm khỏi danh sách yêu thích"
           className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
         >
           <svg
@@ -53,61 +82,56 @@ const SingleItem = ({ item }) => {
         </button>
       </div>
 
+      {/* Product info */}
       <div className="min-w-[387px]">
-        <div className="flex items-center justify-between gap-5">
-          <div className="w-full flex items-center gap-5.5">
-            <div className="flex items-center justify-center rounded-[5px] bg-gray-2 max-w-[80px] w-full h-17.5">
-              <Image src={item.imgs?.thumbnails[0]} alt="product" width={200} height={200} />
-            </div>
-
-            <div>
-              <h3 className="text-dark ease-out duration-200 hover:text-blue">
-                <a href="#"> {item.title} </a>
-              </h3>
-            </div>
+        <div className="flex items-center gap-5.5">
+          <div className="flex items-center justify-center rounded-[5px] bg-gray-2 max-w-[80px] w-full h-17.5 overflow-hidden">
+            <Image
+              src={productImage}
+              alt={productName}
+              width={80}
+              height={70}
+              className="object-cover"
+            />
+          </div>
+          <div>
+            <h3 className="text-dark ease-out duration-200 hover:text-blue">
+              <Link
+                href={
+                  item.product?.id
+                    ? `/shop-details/${item.product.id}`
+                    : "/shop-without-sidebar"
+                }
+              >
+                {productName}
+              </Link>
+            </h3>
+            {variantName && (
+              <p className="text-sm text-gray-500 mt-1">{variantName}</p>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Price */}
       <div className="min-w-[205px]">
-        <p className="text-dark">${item.discountedPrice}</p>
+        <p className="text-dark font-medium">
+          {productPrice.toLocaleString("vi-VN")}₫
+        </p>
       </div>
 
+      {/* Date added */}
       <div className="min-w-[265px]">
-        <div className="flex items-center gap-1.5">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.99935 14.7917C10.3445 14.7917 10.6243 14.5119 10.6243 14.1667V9.16669C10.6243 8.82151 10.3445 8.54169 9.99935 8.54169C9.65417 8.54169 9.37435 8.82151 9.37435 9.16669V14.1667C9.37435 14.5119 9.65417 14.7917 9.99935 14.7917Z"
-              fill="#F23030"
-            />
-            <path
-              d="M9.99935 5.83335C10.4596 5.83335 10.8327 6.20645 10.8327 6.66669C10.8327 7.12692 10.4596 7.50002 9.99935 7.50002C9.53911 7.50002 9.16602 7.12692 9.16602 6.66669C9.16602 6.20645 9.53911 5.83335 9.99935 5.83335Z"
-              fill="#F23030"
-            />
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M1.04102 10C1.04102 5.05247 5.0518 1.04169 9.99935 1.04169C14.9469 1.04169 18.9577 5.05247 18.9577 10C18.9577 14.9476 14.9469 18.9584 9.99935 18.9584C5.0518 18.9584 1.04102 14.9476 1.04102 10ZM9.99935 2.29169C5.74215 2.29169 2.29102 5.74283 2.29102 10C2.29102 14.2572 5.74215 17.7084 9.99935 17.7084C14.2565 17.7084 17.7077 14.2572 17.7077 10C17.7077 5.74283 14.2565 2.29169 9.99935 2.29169Z"
-              fill="#F23030"
-            />
-          </svg>
-
-          <span className="text-red"> Out of Stock </span>
-        </div>
+        <p className="text-dark-4">{createdAt}</p>
       </div>
 
+      {/* Action */}
       <div className="min-w-[150px] flex justify-end">
         <button
-          onClick={() => handleAddToCart()}
-          className="inline-flex text-dark hover:text-white bg-gray-1 border border-gray-3 py-2.5 px-6 rounded-md ease-out duration-200 hover:bg-blue hover:border-gray-3"
+          onClick={handleAddToCart}
+          className="inline-flex text-dark hover:text-white bg-gray-1 border border-gray-3 py-2.5 px-6 rounded-md ease-out duration-200 hover:bg-blue hover:border-blue"
         >
-          Add to Cart
+          Thêm vào giỏ
         </button>
       </div>
     </div>

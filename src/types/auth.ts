@@ -13,14 +13,17 @@ export interface Role {
 export interface User {
   id: number;
   username: string;
-  email?: string;
+  email: string;
   name: string;
-  phone?: string;
-  birth?: string;
-  gender?: string;
-  address?: string;
+  phone?: string | null;
+  birth?: string | null;
+  gender?: string | null;
+  address?: string | null;
   createdAt?: string;
-  roles: Role[];
+  updatedAt?: string;
+  lastLoginAt?: string | null;
+  status?: number;
+  roles?: Role[];
 }
 
 export interface AuthResponse {

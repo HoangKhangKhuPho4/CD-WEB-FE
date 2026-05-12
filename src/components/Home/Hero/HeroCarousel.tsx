@@ -31,9 +31,9 @@ const HeroCarousal = () => {
                 30%
               </span>
               <span className="block text-dark text-sm sm:text-custom-1 sm:leading-[24px]">
-                Sale
+                Giảm
                 <br />
-                Off
+                Giá
               </span>
             </div>
 
@@ -42,14 +42,14 @@ const HeroCarousal = () => {
             </h1>
 
             <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi at ipsum at risus euismod lobortis in
+              Sản phẩm chất lượng cao, âm thanh tuyệt vời, phù hợp cho mọi nhu cầu giải trí và công việc của bạn.
             </p>
 
             <a
               href="#"
               className="inline-flex font-medium text-white text-custom-sm rounded-md bg-dark py-3 px-9 ease-out duration-200 hover:bg-blue mt-10"
             >
-              Shop Now
+              Mua Ngay
             </a>
           </div>
 
@@ -72,9 +72,9 @@ const HeroCarousal = () => {
                 30%
               </span>
               <span className="block text-dark text-sm sm:text-custom-1 sm:leading-[24px]">
-                Sale
+                Giảm
                 <br />
-                Off
+                Giá
               </span>
             </div>
 
@@ -83,15 +83,14 @@ const HeroCarousal = () => {
             </h1>
 
             <p>
-              Lorem ipsum dolor sit, consectetur elit nunc suscipit non ipsum
-              nec suscipit.
+              Sản phẩm chất lượng cao, âm thanh tuyệt vời, phù hợp cho mọi nhu cầu giải trí và công việc của bạn.
             </p>
 
             <a
               href="#"
               className="inline-flex font-medium text-white text-custom-sm rounded-md bg-dark py-3 px-9 ease-out duration-200 hover:bg-blue mt-10"
             >
-              Shop Now
+              Mua Ngay
             </a>
           </div>
 

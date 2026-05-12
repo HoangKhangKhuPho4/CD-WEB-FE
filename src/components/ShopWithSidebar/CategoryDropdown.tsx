@@ -2,19 +2,27 @@
 
 import { useState } from "react";
 
-const CategoryItem = ({ category }) => {
-  const [selected, setSelected] = useState(false);
+export type ShopCategoryFilterRow = { id: number; name: string };
+
+type CategoryItemProps = {
+  category: ShopCategoryFilterRow;
+  selected: boolean;
+  onToggle: (id: number) => void;
+};
+
+const CategoryItem = ({ category, selected, onToggle }: CategoryItemProps) => {
   return (
     <button
+      type="button"
       className={`${
-        selected && "text-blue"
-      } group flex items-center justify-between ease-out duration-200 hover:text-blue `}
-      onClick={() => setSelected(!selected)}
+        selected ? "text-blue" : ""
+      } group flex w-full items-center justify-between text-left ease-out duration-200 hover:text-blue`}
+      onClick={() => onToggle(category.id)}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <div
-          className={`cursor-pointer flex items-center justify-center rounded w-4 h-4 border ${
-            selected ? "border-blue bg-blue" : "bg-white border-gray-3"
+          className={`flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border ${
+            selected ? "border-blue bg-blue" : "border-gray-3 bg-white"
           }`}
         >
           <svg
@@ -35,22 +43,25 @@ const CategoryItem = ({ category }) => {
           </svg>
         </div>
 
-        <span>{category.name}</span>
+        <span className="truncate">{category.name}</span>
       </div>
-
-      <span
-        className={`${
-          selected ? "text-white bg-blue" : "bg-gray-2"
-        } inline-flex rounded-[30px] text-custom-xs px-2 ease-out duration-200 group-hover:text-white group-hover:bg-blue`}
-      >
-        {category.products}
-      </span>
     </button>
   );
 };
 
-const CategoryDropdown = ({ categories }) => {
+type CategoryDropdownProps = {
+  categories: ShopCategoryFilterRow[];
+  selectedId: number | null;
+  onChange: (id: number | null) => void;
+};
+
+const CategoryDropdown = ({ categories, selectedId, onChange }: CategoryDropdownProps) => {
   const [toggleDropdown, setToggleDropdown] = useState(true);
+
+  const handleToggle = (id: number) => {
+    if (selectedId === id) onChange(null);
+    else onChange(id);
+  };
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
@@ -60,24 +71,15 @@ const CategoryDropdown = ({ categories }) => {
           setToggleDropdown(!toggleDropdown);
         }}
         className={`cursor-pointer flex items-center justify-between py-3 pl-6 pr-5.5 ${
-          toggleDropdown && "shadow-filter"
+          toggleDropdown ? "shadow-filter" : ""
         }`}
       >
-        <p className="text-dark">Category</p>
-        <button
-          aria-label="button for category dropdown"
-          className={`text-dark ease-out duration-200 ${
-            toggleDropdown && "rotate-180"
-          }`}
+        <p className="text-dark">Danh mục</p>
+        <span
+          className={`text-dark ease-out duration-200 ${toggleDropdown ? "rotate-180" : ""}`}
+          aria-hidden
         >
-          <svg
-            className="fill-current"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               fillRule="evenodd"
               clipRule="evenodd"
@@ -85,18 +87,20 @@ const CategoryDropdown = ({ categories }) => {
               fill=""
             />
           </svg>
-        </button>
+        </span>
       </div>
 
-      {/* dropdown && 'shadow-filter */}
-      {/* <!-- dropdown menu --> */}
-      <div
-        className={`flex-col gap-3 py-6 pl-6 pr-5.5 ${
-          toggleDropdown ? "flex" : "hidden"
-        }`}
-      >
-        {categories.map((category, key) => (
-          <CategoryItem key={key} category={category} />
+      <div className={`flex-col gap-3 py-6 pl-6 pr-5.5 ${toggleDropdown ? "flex" : "hidden"}`}>
+        {categories.length === 0 ? (
+          <p className="text-sm text-dark-4">Chưa có danh mục hoặc API chưa phản hồi.</p>
+        ) : null}
+        {categories.map((category) => (
+          <CategoryItem
+            key={category.id}
+            category={category}
+            selected={selectedId === category.id}
+            onToggle={handleToggle}
+          />
         ))}
       </div>
     </div>

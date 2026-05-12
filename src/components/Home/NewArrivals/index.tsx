@@ -1,10 +1,33 @@
-import React from "react";
-import Image from "next/image";
+"use client";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
-import shopData from "@/components/Shop/shopData";
+import { fetchNewArrivals } from "@/utils/productApi";
+import { mapBackendProductToFrontend } from "@/utils/productMapper";
+import { Product } from "@/types/product";
 
 const NewArrival = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadNewArrivals = async () => {
+      try {
+        const data = await fetchNewArrivals(0, 8);
+        if (data && data.length > 0) {
+          const mappedProducts = data.map(mapBackendProductToFrontend);
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error("Failed to load new arrivals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNewArrivals();
+  }, []);
+
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -31,10 +54,10 @@ const NewArrival = () => {
                   strokeLinecap="round"
                 />
               </svg>
-              This Week’s
+              Tuần Này
             </span>
             <h2 className="font-semibold text-xl xl:text-heading-5 text-dark">
-              New Arrivals
+              Hàng Mới Về
             </h2>
           </div>
 
@@ -42,16 +65,21 @@ const NewArrival = () => {
             href="/shop-with-sidebar"
             className="inline-flex font-medium text-custom-sm py-2.5 px-7 rounded-md border-gray-3 border bg-gray-1 text-dark ease-out duration-200 hover:bg-dark hover:text-white hover:border-transparent"
           >
-            View All
+            Xem Tất Cả
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
-          {/* <!-- New Arrivals item --> */}
-          {shopData.map((item, key) => (
-            <ProductItem item={item} key={key} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
+            {products.map((item, key) => (
+              <ProductItem item={item} key={item.id || key} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

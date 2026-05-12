@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import CustomSelect from "./CustomSelect";
+import { useRouter } from "next/navigation";
+import CustomSelect, { type HeaderSelectOption } from "./CustomSelect";
 import { menuData } from "./menuData";
 import Dropdown from "./Dropdown";
 import { useAppSelector } from "@/redux/store";
@@ -9,19 +10,58 @@ import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import Image from "next/image";
+import { getProductCategoryRows } from "@/utils/productCategoryCache";
+
+const ALL_CATEGORIES_OPTION: HeaderSelectOption = { label: "Tất cả danh mục", value: "0" };
 
 const Header = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const { openCartModal } = useCartModalContext();
 
+  const [categoryOptions, setCategoryOptions] = useState<HeaderSelectOption[]>([ALL_CATEGORIES_OPTION]);
+  const [selectedCategory, setSelectedCategory] =
+    useState<HeaderSelectOption>(ALL_CATEGORIES_OPTION);
+
   const product = useAppSelector((state) => state.cartReducer.items);
   const { user, isAuthenticated } = useAppSelector((state) => state.authReducer);
   const totalPrice = useSelector(selectTotalPrice);
 
+  useEffect(() => {
+    let cancelled = false;
+    void getProductCategoryRows().then((rows) => {
+      if (cancelled) return;
+      const opts: HeaderSelectOption[] = [
+        ALL_CATEGORIES_OPTION,
+        ...rows.map((r) => ({ label: r.name, value: String(r.id) })),
+      ];
+      setCategoryOptions(opts);
+      setSelectedCategory((prev) => opts.find((o) => o.value === prev.value) ?? ALL_CATEGORIES_OPTION);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedCategoryForSelect = useMemo(
+    () => categoryOptions.find((o) => o.value === selectedCategory.value) ?? ALL_CATEGORIES_OPTION,
+    [categoryOptions, selectedCategory.value]
+  );
+
   const handleOpenCartModal = () => {
     openCartModal();
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (selectedCategory.value !== "0") params.set("type", selectedCategory.value);
+    const q = searchQuery.trim();
+    if (q) params.set("q", q);
+    const qs = params.toString();
+    router.push(qs ? `/shop-with-sidebar?${qs}` : "/shop-with-sidebar");
   };
 
   // Sticky menu
@@ -35,18 +75,8 @@ const Header = () => {
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyMenu);
-  });
-
-  const options = [
-    { label: "All Categories", value: "0" },
-    { label: "Desktop", value: "1" },
-    { label: "Laptop", value: "2" },
-    { label: "Monitor", value: "3" },
-    { label: "Phone", value: "4" },
-    { label: "Watch", value: "5" },
-    { label: "Mouse", value: "6" },
-    { label: "Tablet", value: "7" },
-  ];
+    return () => window.removeEventListener("scroll", handleStickyMenu);
+  }, []);
 
   return (
     <header
@@ -73,9 +103,13 @@ const Header = () => {
             </Link>
 
             <div className="max-w-[475px] w-full">
-              <form>
+              <form onSubmit={handleSearchSubmit}>
                 <div className="flex items-center">
-                  <CustomSelect options={options} />
+                  <CustomSelect
+                    options={categoryOptions}
+                    value={selectedCategoryForSelect}
+                    onChange={(opt) => setSelectedCategory(opt)}
+                  />
 
                   <div className="relative max-w-[333px] sm:min-w-[333px] w-full">
                     {/* <!-- divider --> */}
@@ -86,14 +120,15 @@ const Header = () => {
                       type="search"
                       name="search"
                       id="search"
-                      placeholder="I am shopping for..."
+                      placeholder="Tôi đang tìm kiếm..."
                       autoComplete="off"
                       className="custom-search w-full rounded-r-[5px] bg-gray-1 !border-l-0 border border-gray-3 py-2.5 pl-4 pr-10 outline-none ease-in duration-200"
                     />
 
                     <button
+                      type="submit"
                       id="search-btn"
-                      aria-label="Search"
+                      aria-label="Tìm kiếm"
                       className="flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 ease-in duration-200 hover:text-blue"
                     >
                       <svg
@@ -146,7 +181,7 @@ const Header = () => {
 
               <div>
                 <span className="block text-2xs text-dark-4 uppercase">
-                  24/7 SUPPORT
+                  HỖ TRỢ 24/7
                 </span>
                 <p className="font-medium text-custom-sm text-dark">
                   (+965) 7492-3477
@@ -186,10 +221,10 @@ const Header = () => {
 
                   <div>
                     <span className="block text-2xs text-dark-4 uppercase">
-                      {isAuthenticated ? "Welcome" : "account"}
+                      {isAuthenticated ? "Xin chào" : "Tài khoản"}
                     </span>
                     <p className="font-medium text-custom-sm text-dark truncate max-w-[100px]">
-                      {isAuthenticated ? user?.name : "Sign In"}
+                      {isAuthenticated ? user?.name : "Đăng Nhập"}
                     </p>
                   </div>
                 </Link>
@@ -237,7 +272,7 @@ const Header = () => {
 
                   <div>
                     <span className="block text-2xs text-dark-4 uppercase">
-                      cart
+                      Giỏ hàng
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
                       ${totalPrice}
@@ -360,7 +395,7 @@ const Header = () => {
                         fill=""
                       />
                     </svg>
-                    Recently Viewed
+                    Đã xem gần đây
                   </a>
                 </li>
 
@@ -382,7 +417,7 @@ const Header = () => {
                         fill=""
                       />
                     </svg>
-                    Wishlist
+                    Danh sách yêu thích
                   </Link>
                 </li>
               </ul>

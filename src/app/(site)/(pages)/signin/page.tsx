@@ -1,5 +1,5 @@
 import Signin from "@/components/Auth/Signin";
-import React from "react";
+import React, { Suspense } from "react";
 import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Signin Page | NextCommerce Nextjs E-commerce template",
@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 const SigninPage = () => {
   return (
     <main>
-      <Signin />
+      <Suspense fallback={null}>
+        <Signin />
+      </Suspense>
     </main>
   );
 };

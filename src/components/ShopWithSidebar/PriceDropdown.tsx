@@ -1,14 +1,46 @@
-import { useState } from 'react';
-import RangeSlider from 'react-range-slider-input';
-import 'react-range-slider-input/dist/style.css';
+"use client";
 
-const PriceDropdown = () => {
+import { useState, useEffect } from "react";
+import RangeSlider from "react-range-slider-input";
+import "react-range-slider-input/dist/style.css";
+
+const DEFAULT_MAX = 100_000_000;
+
+type PriceDropdownProps = {
+  /** Đã áp dụng lên API (null = không lọc giá) */
+  appliedMin: number | null;
+  appliedMax: number | null;
+  sliderMax?: number;
+  onApply: (min: number | null, max: number | null) => void;
+};
+
+const PriceDropdown = ({
+  appliedMin,
+  appliedMax,
+  sliderMax = DEFAULT_MAX,
+  onApply,
+}: PriceDropdownProps) => {
   const [toggleDropdown, setToggleDropdown] = useState(true);
+  const [local, setLocal] = useState<[number, number]>([
+    appliedMin ?? 0,
+    appliedMax ?? sliderMax,
+  ]);
 
-  const [selectedPrice, setSelectedPrice] = useState({
-    from: 0,
-    to: 100,
-  });
+  useEffect(() => {
+    setLocal([appliedMin ?? 0, appliedMax ?? sliderMax]);
+  }, [appliedMin, appliedMax, sliderMax]);
+
+  const [from, to] = local;
+
+  const handleApply = () => {
+    const lo = Math.min(from, to);
+    const hi = Math.max(from, to);
+    if (lo <= 0 && hi >= sliderMax) {
+      onApply(null, null);
+    } else {
+      onApply(lo > 0 ? lo : null, hi < sliderMax ? hi : null);
+    }
+  };
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
@@ -16,23 +48,12 @@ const PriceDropdown = () => {
         onClick={() => setToggleDropdown(!toggleDropdown)}
         className="cursor-pointer flex items-center justify-between py-3 pl-6 pr-5.5"
       >
-        <p className="text-dark">Price</p>
-        <button
-          onClick={() => setToggleDropdown(!toggleDropdown)}
-          id="price-dropdown-btn"
-          aria-label="button for price dropdown"
-          className={`text-dark ease-out duration-200 ${
-            toggleDropdown && 'rotate-180'
-          }`}
+        <p className="text-dark">Khoảng giá</p>
+        <span
+          className={`text-dark ease-out duration-200 ${toggleDropdown ? "rotate-180" : ""}`}
+          aria-hidden
         >
-          <svg
-            className="fill-current"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               fillRule="evenodd"
               clipRule="evenodd"
@@ -40,46 +61,38 @@ const PriceDropdown = () => {
               fill=""
             />
           </svg>
-        </button>
+        </span>
       </div>
 
-      {/* // <!-- dropdown menu --> */}
-      <div className={`p-6 ${toggleDropdown ? 'block' : 'hidden'}`}>
-        <div id="pricingOne">
-          <div className="price-range">
-            <RangeSlider
-              id="range-slider-gradient"
-              className="margin-lg"
-              step={'any'}
-              onInput={(e) =>
-                setSelectedPrice({
-                  from: Math.floor(e[0]),
-                  to: Math.ceil(e[1]),
-                })
-              }
-            />
+      <div className={`p-6 ${toggleDropdown ? "block" : "hidden"}`}>
+        <RangeSlider
+          min={0}
+          max={sliderMax}
+          step={100_000}
+          value={local}
+          onInput={(value: number[]) => {
+            setLocal([Math.floor(value[0]), Math.ceil(value[1])] as [number, number]);
+          }}
+        />
 
-            <div className="price-amount flex items-center justify-between pt-4">
-              <div className="text-custom-xs text-dark-4 flex rounded border border-gray-3/80">
-                <span className="block border-r border-gray-3/80 px-2.5 py-1.5">
-                  $
-                </span>
-                <span id="minAmount" className="block px-3 py-1.5">
-                  {selectedPrice.from}
-                </span>
-              </div>
-
-              <div className="text-custom-xs text-dark-4 flex rounded border border-gray-3/80">
-                <span className="block border-r border-gray-3/80 px-2.5 py-1.5">
-                  $
-                </span>
-                <span id="maxAmount" className="block px-3 py-1.5">
-                  {selectedPrice.to}
-                </span>
-              </div>
-            </div>
+        <div className="price-amount flex items-center justify-between pt-4 gap-2">
+          <div className="text-custom-xs text-dark-4 flex rounded border border-gray-3/80 min-w-0">
+            <span className="block border-r border-gray-3/80 px-2 py-1.5 shrink-0">₫</span>
+            <span className="block px-2 py-1.5 truncate">{from.toLocaleString("vi-VN")}</span>
+          </div>
+          <div className="text-custom-xs text-dark-4 flex rounded border border-gray-3/80 min-w-0">
+            <span className="block border-r border-gray-3/80 px-2 py-1.5 shrink-0">₫</span>
+            <span className="block px-2 py-1.5 truncate">{to.toLocaleString("vi-VN")}</span>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleApply}
+          className="mt-4 w-full rounded-lg bg-dark py-2.5 text-sm font-medium text-white hover:bg-blue"
+        >
+          Áp dụng giá
+        </button>
       </div>
     </div>
   );

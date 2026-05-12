@@ -13,19 +13,18 @@ const PromoBanner = () => {
             </span>
 
             <h2 className="font-bold text-xl lg:text-heading-4 xl:text-heading-3 text-dark mb-5">
-              UP TO 30% OFF
+              GIẢM ĐẾN 30%
             </h2>
 
             <p>
-              iPhone 14 has the same superspeedy chip that’s in iPhone 13 Pro,
-              A15 Bionic, with a 5‑core GPU, powers all the latest features.
+              iPhone 14 sử dụng chip siêu tốc A15 Bionic tương tự như iPhone 13 Pro, tích hợp GPU 5 lõi, cung cấp sức mạnh cho mọi tính năng mới nhất.
             </p>
 
             <a
               href="#"
               className="inline-flex font-medium text-custom-sm text-white bg-blue py-[11px] px-9.5 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
             >
-              Buy Now
+              Mua Ngay
             </a>
           </div>
 
@@ -55,18 +54,18 @@ const PromoBanner = () => {
               </span>
 
               <h2 className="font-bold text-xl lg:text-heading-4 text-dark mb-2.5">
-                Workout At Home
+                Tập Luyện Tại Nhà
               </h2>
 
               <p className="font-semibold text-custom-1 text-teal">
-                Flat 20% off
+                Giảm Ngay 20%
               </p>
 
               <a
                 href="#"
                 className="inline-flex font-medium text-custom-sm text-white bg-teal py-2.5 px-8.5 rounded-md ease-out duration-200 hover:bg-teal-dark mt-9"
               >
-                Grab Now
+                Mua Ngay
               </a>
             </div>
           </div>
@@ -87,19 +86,18 @@ const PromoBanner = () => {
               </span>
 
               <h2 className="font-bold text-xl lg:text-heading-4 text-dark mb-2.5">
-                Up to <span className="text-orange">40%</span> off
+                Giảm đến <span className="text-orange">40%</span>
               </h2>
 
               <p className="max-w-[285px] text-custom-sm">
-                The aerospace-grade titanium case strikes the perfect balance of
-                everything.
+                Vỏ titan chuẩn hàng không vũ trụ mang lại sự cân bằng hoàn hảo cho mọi thứ.
               </p>
 
               <a
                 href="#"
                 className="inline-flex font-medium text-custom-sm text-white bg-orange py-2.5 px-8.5 rounded-md ease-out duration-200 hover:bg-orange-dark mt-7.5"
               >
-                Buy Now
+                Mua Ngay
               </a>
             </div>
           </div>

@@ -1,13 +1,32 @@
 "use client";
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
-import { useAppSelector } from "@/redux/store";
+import { useAppSelector, AppDispatch } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { toggleWishlist, checkIsLiked } from "@/redux/features/wishlist-slice";
+import { updateproductDetails } from "@/redux/features/product-details";
+import { fetchProductDetail } from "@/utils/productApi";
+import { mapBackendProductToFrontend } from "@/utils/productMapper";
+import toast from "react-hot-toast";
 
 const ShopDetails = () => {
+  const params = useParams();
+  const routeIdRaw = params?.id;
+  const routeProductId =
+    routeIdRaw != null && !Array.isArray(routeIdRaw)
+      ? Number(routeIdRaw)
+      : Array.isArray(routeIdRaw)
+        ? Number(routeIdRaw[0])
+        : NaN;
+  const shouldLoadFromApi =
+    Number.isFinite(routeProductId) && routeProductId > 0;
+
+  const [apiLoading, setApiLoading] = useState(false);
   const [activeColor, setActiveColor] = useState("blue");
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
@@ -16,6 +35,9 @@ const ShopDetails = () => {
   const [type, setType] = useState("active");
   const [sim, setSim] = useState("dual");
   const [quantity, setQuantity] = useState(1);
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
   const [activeTab, setActiveTab] = useState("tabOne");
 
@@ -75,16 +97,96 @@ const ShopDetails = () => {
 
   const colors = ["red", "blue", "orange", "pink", "purple"];
 
-  const alreadyExist = localStorage.getItem("productDetails");
-  const productFromStorage = useAppSelector(
+  const productFromRedux = useAppSelector(
     (state) => state.productDetailsReducer.value
   );
+  const storedJson =
+    typeof window !== "undefined"
+      ? localStorage.getItem("productDetails")
+      : null;
+  const parsedStorage = storedJson ? JSON.parse(storedJson) : null;
 
-  const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
+  const product = shouldLoadFromApi
+    ? productFromRedux?.id === routeProductId
+      ? productFromRedux
+      : parsedStorage?.id === routeProductId
+        ? parsedStorage
+        : productFromRedux
+    : parsedStorage ?? productFromRedux;
+
+  const isLiked = useAppSelector(
+    (state) => state.wishlistReducer.likedMap[product?.id] || false
+  );
 
   useEffect(() => {
     localStorage.setItem("productDetails", JSON.stringify(product));
   }, [product]);
+
+  useEffect(() => {
+    if (isAuthenticated && product?.id) {
+      dispatch(checkIsLiked(product.id));
+    }
+  }, [dispatch, isAuthenticated, product?.id]);
+
+  useEffect(() => {
+    if (!shouldLoadFromApi) return;
+    let cancelled = false;
+    setApiLoading(true);
+    (async () => {
+      try {
+        const raw = await fetchProductDetail(routeProductId);
+        if (cancelled) return;
+        if (!raw) {
+          toast.error("Không tìm thấy sản phẩm");
+          dispatch(
+            updateproductDetails({
+              title: "",
+              reviews: 0,
+              price: 0,
+              discountedPrice: 0,
+              id: 0,
+              imgs: { thumbnails: [], previews: [] },
+            })
+          );
+          return;
+        }
+        dispatch(updateproductDetails(mapBackendProductToFrontend(raw)));
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) toast.error("Không tải được chi tiết sản phẩm");
+      } finally {
+        if (!cancelled) setApiLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoadFromApi, routeProductId, dispatch]);
+
+  useEffect(() => {
+    setPreviewImg(0);
+  }, [product?.id]);
+
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để thêm vào yêu thích");
+      return;
+    }
+    if (!product?.id) return;
+    try {
+      const result = await dispatch(toggleWishlist(product.id)).unwrap();
+      if (result.isLiked) {
+        toast.success("Đã thêm vào yêu thích ❤️");
+      } else {
+        toast.success("Đã bỏ yêu thích");
+      }
+    } catch (err: any) {
+      toast.error(err || "Có lỗi xảy ra");
+    }
+  };
+
+  const showRouteLoading =
+    shouldLoadFromApi && apiLoading && product?.id !== routeProductId;
 
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
@@ -95,8 +197,14 @@ const ShopDetails = () => {
     <>
       <Breadcrumb title={"Shop Details"} pages={["shop details"]} />
 
-      {product.title === "" ? (
-        "Please add product"
+      {showRouteLoading ? (
+        <div className="flex justify-center items-center py-24">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue" />
+        </div>
+      ) : product.title === "" ? (
+        <p className="text-center py-24 text-dark-4">
+          Vui lòng chọn sản phẩm từ cửa hàng hoặc mở đúng liên kết chi tiết.
+        </p>
       ) : (
         <>
           <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
@@ -162,14 +270,17 @@ const ShopDetails = () => {
 
                 {/* <!-- product content --> */}
                 <div className="max-w-[539px] w-full">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-start justify-between mb-3 gap-3">
                     <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
                       {product.title}
                     </h2>
 
-                    <div className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5">
-                      30% OFF
-                    </div>
+                    {product.couponPercent != null &&
+                    product.couponPercent > 0 ? (
+                      <div className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5 shrink-0">
+                        {Math.round(product.couponPercent)}% OFF
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-5.5 mb-4.5">
@@ -282,7 +393,7 @@ const ShopDetails = () => {
                         </svg>
                       </div>
 
-                      <span> (5 customer reviews) </span>
+                      <span> ({product.reviews} đánh giá) </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -371,242 +482,147 @@ const ShopDetails = () => {
                   </ul>
 
                   <form onSubmit={(e) => e.preventDefault()}>
-                    <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-9 py-9">
-                      {/* <!-- details item --> */}
-                      <div className="flex items-center gap-4">
-                        <div className="min-w-[65px]">
-                          <h4 className="font-medium text-dark">Color:</h4>
-                        </div>
-
-                        <div className="flex items-center gap-2.5">
-                          {colors.map((color, key) => (
-                            <label
-                              key={key}
-                              htmlFor={color}
-                              className="cursor-pointer select-none flex items-center"
-                            >
-                              <div className="relative">
-                                <input
-                                  type="radio"
-                                  name="color"
-                                  id={color}
-                                  className="sr-only"
-                                  onChange={() => setActiveColor(color)}
-                                />
-                                <div
-                                  className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${activeColor === color && "border"
-                                    }`}
-                                  style={{ borderColor: `${color}` }}
-                                >
-                                  <span
-                                    className="block w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: `${color}` }}
-                                  ></span>
+                    <div className="flex flex-col gap-6 border-y border-gray-3 mt-7.5 mb-9 py-9">
+                      {/* <!-- details item: Color --> */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Màu sắc:</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {colors.map((color, key) => {
+                            const isSelected = activeColor === color;
+                            // Giả lập trạng thái hết hàng cho màu "purple"
+                            const disabled = color === "purple";
+                            
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => { if (!disabled) setActiveColor(color); }}
+                                className={`
+                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
+                                  ${disabled 
+                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
+                                    : isSelected 
+                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
+                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
+                                  }
+                                `}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="block w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: color }}></span>
+                                  <span className={`text-sm font-bold capitalize ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
+                                    {color}
+                                  </span>
                                 </div>
+                                
+                                {/* Dấu gạch ngang và chữ Hết hàng */}
+                                {disabled && (
+                                  <>
+                                    <span className="ml-2 text-[10px] font-bold text-[#e53935]">Hết hàng</span>
+                                    <div className="absolute top-1/2 left-0 w-full h-[1px] bg-[#9e9e9e] -rotate-[15deg]"></div>
+                                  </>
+                                )}
                               </div>
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* <!-- details item --> */}
-                      <div className="flex items-center gap-4">
-                        <div className="min-w-[65px]">
-                          <h4 className="font-medium text-dark">Storage:</h4>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          {storages.map((item, key) => (
-                            <label
-                              key={key}
-                              htmlFor={item.id}
-                              className="flex cursor-pointer select-none items-center"
-                            >
-                              <div className="relative">
-                                <input
-                                  type="checkbox"
-                                  name="storage"
-                                  id={item.id}
-                                  className="sr-only"
-                                  onChange={() => setStorage(item.id)}
-                                />
-
-                                {/*  */}
-                                <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${storage === item.id
-                                    ? "border-blue bg-blue"
-                                    : "border-gray-4"
-                                    } `}
-                                >
-                                  <span
-                                    className={
-                                      storage === item.id
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    }
-                                  >
-                                    <svg
-                                      width="24"
-                                      height="24"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <rect
-                                        x="4"
-                                        y="4.00006"
-                                        width="16"
-                                        height="16"
-                                        rx="4"
-                                        fill="#3C50E0"
-                                      />
-                                      <path
-                                        fillRule="evenodd"
-                                        clipRule="evenodd"
-                                        d="M16.3103 9.25104C16.471 9.41178 16.5612 9.62978 16.5612 9.85707C16.5612 10.0844 16.471 10.3024 16.3103 10.4631L12.0243 14.7491C11.8635 14.9098 11.6455 15.0001 11.4182 15.0001C11.191 15.0001 10.973 14.9098 10.8122 14.7491L8.24062 12.1775C8.08448 12.0158 7.99808 11.7993 8.00003 11.5745C8.00199 11.3498 8.09214 11.1348 8.25107 10.9759C8.41 10.8169 8.62499 10.7268 8.84975 10.7248C9.0745 10.7229 9.29103 10.8093 9.4527 10.9654L11.4182 12.931L15.0982 9.25104C15.2589 9.09034 15.4769 9.00006 15.7042 9.00006C15.9315 9.00006 16.1495 9.09034 16.3103 9.25104Z"
-                                        fill="white"
-                                      />
-                                    </svg>
-                                  </span>
-                                </div>
+                      {/* <!-- details item: Storage --> */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Dung lượng bộ nhớ:</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {storages.map((item, key) => {
+                            const isSelected = storage === item.id;
+                            // Giả lập trạng thái hết hàng
+                            const disabled = item.id === "gb512";
+                            
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => { if (!disabled) setStorage(item.id); }}
+                                className={`
+                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
+                                  ${disabled 
+                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
+                                    : isSelected 
+                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
+                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
+                                  }
+                                `}
+                              >
+                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
+                                  {item.title}
+                                </span>
+                                {disabled && (
+                                  <>
+                                    <span className="ml-2 text-[10px] font-bold text-[#e53935]">Hết hàng</span>
+                                    <div className="absolute top-1/2 left-0 w-full h-[1px] bg-[#9e9e9e] -rotate-[15deg]"></div>
+                                  </>
+                                )}
                               </div>
-                              {item.title}
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* // <!-- details item --> */}
-                      <div className="flex items-center gap-4">
-                        <div className="min-w-[65px]">
-                          <h4 className="font-medium text-dark">Type:</h4>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          {types.map((item, key) => (
-                            <label
-                              key={key}
-                              htmlFor={item.id}
-                              className="flex cursor-pointer select-none items-center"
-                            >
-                              <div className="relative">
-                                <input
-                                  type="checkbox"
-                                  name="storage"
-                                  id={item.id}
-                                  className="sr-only"
-                                  onChange={() => setType(item.id)}
-                                />
-
-                                {/*  */}
-                                <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${type === item.id
-                                    ? "border-blue bg-blue"
-                                    : "border-gray-4"
-                                    } `}
-                                >
-                                  <span
-                                    className={
-                                      type === item.id
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    }
-                                  >
-                                    <svg
-                                      width="24"
-                                      height="24"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <rect
-                                        x="4"
-                                        y="4.00006"
-                                        width="16"
-                                        height="16"
-                                        rx="4"
-                                        fill="#3C50E0"
-                                      />
-                                      <path
-                                        fillRule="evenodd"
-                                        clipRule="evenodd"
-                                        d="M16.3103 9.25104C16.471 9.41178 16.5612 9.62978 16.5612 9.85707C16.5612 10.0844 16.471 10.3024 16.3103 10.4631L12.0243 14.7491C11.8635 14.9098 11.6455 15.0001 11.4182 15.0001C11.191 15.0001 10.973 14.9098 10.8122 14.7491L8.24062 12.1775C8.08448 12.0158 7.99808 11.7993 8.00003 11.5745C8.00199 11.3498 8.09214 11.1348 8.25107 10.9759C8.41 10.8169 8.62499 10.7268 8.84975 10.7248C9.0745 10.7229 9.29103 10.8093 9.4527 10.9654L11.4182 12.931L15.0982 9.25104C15.2589 9.09034 15.4769 9.00006 15.7042 9.00006C15.9315 9.00006 16.1495 9.09034 16.3103 9.25104Z"
-                                        fill="white"
-                                      />
-                                    </svg>
-                                  </span>
-                                </div>
+                      {/* <!-- details item: Type --> */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Loại sản phẩm:</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {types.map((item, key) => {
+                            const isSelected = type === item.id;
+                            const disabled = false;
+                            
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => setType(item.id)}
+                                className={`
+                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
+                                  ${disabled 
+                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
+                                    : isSelected 
+                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
+                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
+                                  }
+                                `}
+                              >
+                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
+                                  {item.title}
+                                </span>
                               </div>
-                              {item.title}
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* // <!-- details item --> */}
-                      <div className="flex items-center gap-4">
-                        <div className="min-w-[65px]">
-                          <h4 className="font-medium text-dark">Sim:</h4>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          {sims.map((item, key) => (
-                            <label
-                              key={key}
-                              htmlFor={item.id}
-                              className="flex cursor-pointer select-none items-center"
-                            >
-                              <div className="relative">
-                                <input
-                                  type="checkbox"
-                                  name="storage"
-                                  id={item.id}
-                                  className="sr-only"
-                                  onChange={() => setSim(item.id)}
-                                />
-
-                                {/*  */}
-                                <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${sim === item.id
-                                    ? "border-blue bg-blue"
-                                    : "border-gray-4"
-                                    } `}
-                                >
-                                  <span
-                                    className={
-                                      sim === item.id
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    }
-                                  >
-                                    <svg
-                                      width="24"
-                                      height="24"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <rect
-                                        x="4"
-                                        y="4.00006"
-                                        width="16"
-                                        height="16"
-                                        rx="4"
-                                        fill="#3C50E0"
-                                      />
-                                      <path
-                                        fillRule="evenodd"
-                                        clipRule="evenodd"
-                                        d="M16.3103 9.25104C16.471 9.41178 16.5612 9.62978 16.5612 9.85707C16.5612 10.0844 16.471 10.3024 16.3103 10.4631L12.0243 14.7491C11.8635 14.9098 11.6455 15.0001 11.4182 15.0001C11.191 15.0001 10.973 14.9098 10.8122 14.7491L8.24062 12.1775C8.08448 12.0158 7.99808 11.7993 8.00003 11.5745C8.00199 11.3498 8.09214 11.1348 8.25107 10.9759C8.41 10.8169 8.62499 10.7268 8.84975 10.7248C9.0745 10.7229 9.29103 10.8093 9.4527 10.9654L11.4182 12.931L15.0982 9.25104C15.2589 9.09034 15.4769 9.00006 15.7042 9.00006C15.9315 9.00006 16.1495 9.09034 16.3103 9.25104Z"
-                                        fill="white"
-                                      />
-                                    </svg>
-                                  </span>
-                                </div>
+                      {/* <!-- details item: Sim --> */}
+                      <div className="flex flex-col gap-3">
+                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Sim:</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {sims.map((item, key) => {
+                            const isSelected = sim === item.id;
+                            const disabled = false;
+                            
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => setSim(item.id)}
+                                className={`
+                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
+                                  ${disabled 
+                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
+                                    : isSelected 
+                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
+                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
+                                  }
+                                `}
+                              >
+                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
+                                  {item.title}
+                                </span>
                               </div>
-                              {item.title}
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -671,9 +687,13 @@ const ShopDetails = () => {
                         Purchase Now
                       </a>
 
-                      <a
-                        href="#"
-                        className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 ease-out duration-200 hover:text-white hover:bg-dark hover:border-transparent"
+                      <button
+                        onClick={handleToggleWishlist}
+                        className={`flex items-center justify-center w-12 h-12 rounded-md border ease-out duration-200 ${
+                          isLiked
+                            ? "border-red bg-red-light-6 text-red hover:bg-red hover:text-white"
+                            : "border-gray-3 text-dark hover:text-white hover:bg-dark hover:border-transparent"
+                        }`}
                       >
                         <svg
                           className="fill-current"
@@ -683,14 +703,21 @@ const ShopDetails = () => {
                           fill="none"
                           xmlns="http://www.w3.org/2000/svg"
                         >
-                          <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M5.62436 4.42423C3.96537 5.18256 2.75 6.98626 2.75 9.13713C2.75 11.3345 3.64922 13.0283 4.93829 14.4798C6.00072 15.6761 7.28684 16.6677 8.54113 17.6346C8.83904 17.8643 9.13515 18.0926 9.42605 18.3219C9.95208 18.7366 10.4213 19.1006 10.8736 19.3649C11.3261 19.6293 11.6904 19.75 12 19.75C12.3096 19.75 12.6739 19.6293 13.1264 19.3649C13.5787 19.1006 14.0479 18.7366 14.574 18.3219C14.8649 18.0926 15.161 17.8643 15.4589 17.6346C16.7132 16.6677 17.9993 15.6761 19.0617 14.4798C20.3508 13.0283 21.25 11.3345 21.25 9.13713C21.25 6.98626 20.0346 5.18256 18.3756 4.42423C16.7639 3.68751 14.5983 3.88261 12.5404 6.02077C12.399 6.16766 12.2039 6.25067 12 6.25067C11.7961 6.25067 11.601 6.16766 11.4596 6.02077C9.40166 3.88261 7.23607 3.68751 5.62436 4.42423ZM12 4.45885C9.68795 2.39027 7.09896 2.1009 5.00076 3.05999C2.78471 4.07296 1.25 6.42506 1.25 9.13713C1.25 11.8027 2.3605 13.8361 3.81672 15.4758C4.98287 16.789 6.41022 17.888 7.67083 18.8586C7.95659 19.0786 8.23378 19.2921 8.49742 19.4999C9.00965 19.9037 9.55954 20.3343 10.1168 20.66C10.6739 20.9855 11.3096 21.25 12 21.25C12.6904 21.25 13.3261 20.9855 13.8832 20.66C14.4405 20.3343 14.9903 19.9037 15.5026 19.4999C15.7662 19.2921 16.0434 19.0786 16.3292 18.8586C17.5898 17.888 19.0171 16.789 20.1833 15.4758C21.6395 13.8361 22.75 11.8027 22.75 9.13713C22.75 6.42506 21.2153 4.07296 18.9992 3.05999C16.901 2.1009 14.3121 2.39027 12 4.45885Z"
-                            fill=""
-                          />
+                          {isLiked ? (
+                            <path
+                              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                              fill="currentColor"
+                            />
+                          ) : (
+                            <path
+                              fillRule="evenodd"
+                              clipRule="evenodd"
+                              d="M5.62436 4.42423C3.96537 5.18256 2.75 6.98626 2.75 9.13713C2.75 11.3345 3.64922 13.0283 4.93829 14.4798C6.00072 15.6761 7.28684 16.6677 8.54113 17.6346C8.83904 17.8643 9.13515 18.0926 9.42605 18.3219C9.95208 18.7366 10.4213 19.1006 10.8736 19.3649C11.3261 19.6293 11.6904 19.75 12 19.75C12.3096 19.75 12.6739 19.6293 13.1264 19.3649C13.5787 19.1006 14.0479 18.7366 14.574 18.3219C14.8649 18.0926 15.161 17.8643 15.4589 17.6346C16.7132 16.6677 17.9993 15.6761 19.0617 14.4798C20.3508 13.0283 21.25 11.3345 21.25 9.13713C21.25 6.98626 20.0346 5.18256 18.3756 4.42423C16.7639 3.68751 14.5983 3.88261 12.5404 6.02077C12.399 6.16766 12.2039 6.25067 12 6.25067C11.7961 6.25067 11.601 6.16766 11.4596 6.02077C9.40166 3.88261 7.23607 3.68751 5.62436 4.42423ZM12 4.45885C9.68795 2.39027 7.09896 2.1009 5.00076 3.05999C2.78471 4.07296 1.25 6.42506 1.25 9.13713C1.25 11.8027 2.3605 13.8361 3.81672 15.4758C4.98287 16.789 6.41022 17.888 7.67083 18.8586C7.95659 19.0786 8.23378 19.2921 8.49742 19.4999C9.00965 19.9037 9.55954 20.3343 10.1168 20.66C10.6739 20.9855 11.3096 21.25 12 21.25C12.6904 21.25 13.3261 20.9855 13.8832 20.66C14.4405 20.3343 14.9903 19.9037 15.5026 19.4999C15.7662 19.2921 16.0434 19.0786 16.3292 18.8586C17.5898 17.888 19.0171 16.789 20.1833 15.4758C21.6395 13.8361 22.75 11.8027 22.75 9.13713C22.75 6.42506 21.2153 4.07296 18.9992 3.05999C16.901 2.1009 14.3121 2.39027 12 4.45885Z"
+                              fill=""
+                            />
+                          )}
                         </svg>
-                      </a>
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -726,44 +753,23 @@ const ShopDetails = () => {
                 >
                   <div className="max-w-[670px] w-full">
                     <h2 className="font-medium text-2xl text-dark mb-7">
-                      Specifications:
+                      Mô tả sản phẩm
                     </h2>
 
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p className="mb-6">
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
-                    </p>
-                    <p>
-                      with the release of Letraset sheets containing Lorem Ipsum
-                      passages, and more recently with desktop publishing
-                      software like Aldus PageMaker including versions.
+                    <p className="mb-6 whitespace-pre-wrap text-dark-4">
+                      {product.detail?.trim()
+                        ? product.detail
+                        : "Chưa có mô tả chi tiết cho sản phẩm này."}
                     </p>
                   </div>
 
                   <div className="max-w-[447px] w-full">
                     <h2 className="font-medium text-2xl text-dark mb-7">
-                      Care & Maintenance:
+                      Thương hiệu &amp; danh mục
                     </h2>
 
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p>
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
+                    <p className="mb-6 text-dark-4">
+                      {product.producerName || "Đang cập nhật."}
                     </p>
                   </div>
                 </div>
@@ -782,7 +788,9 @@ const ShopDetails = () => {
                       <p className="text-sm sm:text-base text-dark">Brand</p>
                     </div>
                     <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">Apple</p>
+                      <p className="text-sm sm:text-base text-dark">
+                        {product.producerName || "—"}
+                      </p>
                     </div>
                   </div>
 

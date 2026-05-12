@@ -1,35 +1,40 @@
 "use client";
+
 import React, { useState } from "react";
 
-const ColorsDropdwon = () => {
-  const [toggleDropdown, setToggleDropdown] = useState(true);
-  const [activeColor, setActiveColor] = useState("blue");
+/** Giá trị `color` gửi GET /api/products/search — chỉnh nếu BE dùng mã khác */
+const COLOR_OPTIONS: { value: string; label: string; dot: string }[] = [
+  { value: "red", label: "Đỏ", dot: "#ef4444" },
+  { value: "blue", label: "Xanh dương", dot: "#3b82f6" },
+  { value: "orange", label: "Cam", dot: "#f97316" },
+  { value: "pink", label: "Hồng", dot: "#ec4899" },
+  { value: "purple", label: "Tím", dot: "#a855f7" },
+  { value: "black", label: "Đen", dot: "#111827" },
+  { value: "white", label: "Trắng", dot: "#e5e7eb" },
+];
 
-  const colors = ["red", "blue", "orange", "pink", "purple"];
+type ColorsDropdownProps = {
+  selected: string | null;
+  onChange: (color: string | null) => void;
+};
+
+const ColorsDropdwon = ({ selected, onChange }: ColorsDropdownProps) => {
+  const [toggleDropdown, setToggleDropdown] = useState(true);
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
       <div
         onClick={() => setToggleDropdown(!toggleDropdown)}
         className={`cursor-pointer flex items-center justify-between py-3 pl-6 pr-5.5 ${
-          toggleDropdown && "shadow-filter"
+          toggleDropdown ? "shadow-filter" : ""
         }`}
       >
-        <p className="text-dark">Colors</p>
-        <button
-          aria-label="button for colors dropdown"
-          className={`text-dark ease-out duration-200 ${
-            toggleDropdown && "rotate-180"
-          }`}
+        <p className="text-dark">Màu sắc</p>
+        <span
+          className={`text-dark ease-out duration-200 ${toggleDropdown ? "rotate-180" : ""}`}
+          aria-hidden
         >
-          <svg
-            className="fill-current"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path
               fillRule="evenodd"
               clipRule="evenodd"
@@ -37,42 +42,31 @@ const ColorsDropdwon = () => {
               fill=""
             />
           </svg>
-        </button>
+        </span>
       </div>
 
-      {/* <!-- dropdown menu --> */}
-      <div
-        className={`flex-wrap gap-2.5 p-6 ${
-          toggleDropdown ? "flex" : "hidden"
-        }`}
-      >
-        {colors.map((color, key) => (
-          <label
-            key={key}
-            htmlFor={color}
-            className="cursor-pointer select-none flex items-center"
+      <div className={`flex flex-wrap gap-3 p-6 ${toggleDropdown ? "flex" : "hidden"}`}>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className={`rounded-full border px-3 py-1 text-xs ${
+            selected == null ? "border-blue bg-blue/10 text-blue" : "border-gray-3 text-dark-4"
+          }`}
+        >
+          Tất cả
+        </button>
+        {COLOR_OPTIONS.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            onClick={() => onChange(selected === c.value ? null : c.value)}
+            className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
+              selected === c.value ? "border-blue bg-blue/10" : "border-gray-3"
+            }`}
           >
-            <div className="relative">
-              <input
-                type="radio"
-                name="color"
-                id={color}
-                className="sr-only"
-                onChange={() => setActiveColor(color)}
-              />
-              <div
-                className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${
-                  activeColor === color && "border"
-                }`}
-                style={{ borderColor: `${color}` }}
-              >
-                <span
-                  className="block w-3 h-3 rounded-full"
-                  style={{ backgroundColor: `${color}` }}
-                ></span>
-              </div>
-            </div>
-          </label>
+            <span className="h-3 w-3 rounded-full border border-gray-3" style={{ backgroundColor: c.dot }} />
+            {c.label}
+          </button>
         ))}
       </div>
     </div>

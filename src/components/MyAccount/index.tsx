@@ -31,7 +31,7 @@ const MyAccount = () => {
 
   return (
     <>
-      <Breadcrumb title={"My Account"} pages={["my account"]} />
+      <Breadcrumb title={"Tài Khoản Của Tôi"} pages={["tài khoản của tôi"]} />
 
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -51,9 +51,9 @@ const MyAccount = () => {
 
                   <div>
                     <p className="font-medium text-dark mb-0.5">
-                      {user?.name || "User Name"}
+                      {user?.name || "Tên Người Dùng"}
                     </p>
-                    <p className="text-custom-xs">Member Since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</p>
+                    <p className="text-custom-xs">Thành viên từ {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}</p>
                   </div>
                 </div>
 
@@ -100,7 +100,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Dashboard
+                      Bảng Điều Khiển
                     </button>
                     <button
                       onClick={() => setActiveTab("orders")}
@@ -137,7 +137,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Orders
+                      Đơn Hàng
                     </button>
 
                     <button
@@ -165,7 +165,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Downloads
+                      Tải Xuống
                     </button>
 
                     <button
@@ -195,7 +195,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Addresses
+                      Địa Chỉ
                     </button>
 
                     <button
@@ -227,7 +227,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Account Details
+                      Chi Tiết Tài Khoản
                     </button>
 
                     <button
@@ -255,7 +255,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Logout
+                      Đăng Xuất
                     </button>
                   </div>
                 </div>
@@ -273,20 +273,19 @@ const MyAccount = () => {
               }`}
             >
               <p className="text-dark">
-                Hello {user?.name} (not {user?.name}?
+                Xin chào {user?.name} (không phải {user?.name}?
                 <button
                   onClick={handleLogout}
                   className="text-red ease-out duration-200 hover:underline ml-1"
                 >
-                  Log Out
+                  Đăng Xuất
                 </button>
                 )
               </p>
 
               <p className="text-custom-sm mt-4">
-                From your account dashboard you can view your recent orders,
-                manage your shipping and billing addresses, and edit your
-                password and account details.
+                Từ bảng điều khiển tài khoản của bạn, bạn có thể xem các đơn hàng gần đây,
+                quản lý địa chỉ giao hàng và thanh toán, cũng như chỉnh sửa mật khẩu và chi tiết tài khoản.
               </p>
             </div>
             {/* <!-- dashboard tab content end -->
@@ -307,7 +306,7 @@ const MyAccount = () => {
                 activeTab === "downloads" ? "block" : "hidden"
               }`}
             >
-              <p>You don&apos;t have any download</p>
+              <p>Bạn không có tệp tải xuống nào</p>
             </div>
             {/* <!-- downloads tab content end -->
 
@@ -320,7 +319,7 @@ const MyAccount = () => {
               <div className="xl:max-w-[370px] w-full bg-white shadow-1 rounded-xl">
                 <div className="flex items-center justify-between py-5 px-4 sm:pl-7.5 sm:pr-6 border-b border-gray-3">
                   <p className="font-medium text-xl text-dark">
-                    Shipping Address
+                    Địa Chỉ Giao Hàng
                   </p>
 
                   <button
@@ -369,7 +368,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Name: {user?.name}
+                      Tên: {user?.name}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -417,7 +416,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Phone: {user?.phone || "N/A"}
+                      Số Điện Thoại: {user?.phone || "N/A"}
                     </p>
 
                     <p className="flex gap-2.5 text-custom-sm">
@@ -443,7 +442,7 @@ const MyAccount = () => {
                           </clipPath>
                         </defs>
                       </svg>
-                      Address: {user?.address || "N/A"}
+                      Địa Chỉ: {user?.address || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -452,7 +451,7 @@ const MyAccount = () => {
               <div className="xl:max-w-[370px] w-full bg-white shadow-1 rounded-xl">
                 <div className="flex items-center justify-between py-5 px-4 sm:pl-7.5 sm:pr-6 border-b border-gray-3">
                   <p className="font-medium text-xl text-dark">
-                    Billing Address
+                    Địa Chỉ Thanh Toán
                   </p>
 
                   <button
@@ -501,7 +500,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Name: {user?.name}
+                      Tên: {user?.name}
                     </p>
 
                     <p className="flex items-center gap-2.5 text-custom-sm">
@@ -549,7 +548,7 @@ const MyAccount = () => {
                           fill=""
                         />
                       </svg>
-                      Phone: {user?.phone || "N/A"}
+                      Số Điện Thoại: {user?.phone || "N/A"}
                     </p>
 
                     <p className="flex gap-2.5 text-custom-sm">
@@ -575,7 +574,7 @@ const MyAccount = () => {
                           </clipPath>
                         </defs>
                       </svg>
-                      Address: {user?.address || "N/A"}
+                      Địa Chỉ: {user?.address || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -594,7 +593,7 @@ const MyAccount = () => {
                   <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
                     <div className="w-full">
                       <label htmlFor="firstName" className="block mb-2.5">
-                        First Name <span className="text-red">*</span>
+                        Tên <span className="text-red">*</span>
                       </label>
 
                       <input
@@ -609,7 +608,7 @@ const MyAccount = () => {
 
                     <div className="w-full">
                       <label htmlFor="lastName" className="block mb-2.5">
-                        Last Name <span className="text-red">*</span>
+                        Họ <span className="text-red">*</span>
                       </label>
 
                       <input
@@ -625,14 +624,14 @@ const MyAccount = () => {
 
                   <div className="mb-5">
                     <label htmlFor="countryName" className="block mb-2.5">
-                      Country/ Region <span className="text-red">*</span>
+                      Quốc gia/ Khu vực <span className="text-red">*</span>
                     </label>
 
                     <div className="relative">
                       <select className="w-full bg-gray-1 rounded-md border border-gray-3 text-dark-4 py-3 pl-5 pr-9 duration-200 appearance-none outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20">
-                        <option value="0">Australia</option>
-                        <option value="1">America</option>
-                        <option value="2">England</option>
+                        <option value="0">Việt Nam</option>
+                        <option value="1">Mỹ</option>
+                        <option value="2">Anh</option>
                       </select>
 
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-4">
@@ -659,23 +658,22 @@ const MyAccount = () => {
                     type="submit"
                     className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
                   >
-                    Save Changes
+                    Lưu Thay Đổi
                   </button>
                 </div>
 
                 <p className="text-custom-sm mt-5 mb-9">
-                  This will be how your name will be displayed in the account
-                  section and in reviews
+                  Tên này sẽ được hiển thị trong phần tài khoản và trong các đánh giá của bạn
                 </p>
 
                 <p className="font-medium text-xl sm:text-2xl text-dark mb-7">
-                  Password Change
+                  Đổi Mật Khẩu
                 </p>
 
                 <div className="bg-white shadow-1 rounded-xl p-4 sm:p-8.5">
                   <div className="mb-5">
                     <label htmlFor="oldPassword" className="block mb-2.5">
-                      Old Password
+                      Mật Khẩu Cũ
                     </label>
 
                     <input
@@ -689,7 +687,7 @@ const MyAccount = () => {
 
                   <div className="mb-5">
                     <label htmlFor="newPassword" className="block mb-2.5">
-                      New Password
+                      Mật Khẩu Mới
                     </label>
 
                     <input
@@ -706,7 +704,7 @@ const MyAccount = () => {
                       htmlFor="confirmNewPassword"
                       className="block mb-2.5"
                     >
-                      Confirm New Password
+                      Xác Nhận Mật Khẩu Mới
                     </label>
 
                     <input
@@ -722,7 +720,7 @@ const MyAccount = () => {
                     type="submit"
                     className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
                   >
-                    Change Password
+                    Đổi Mật Khẩu
                   </button>
                 </div>
               </form>
