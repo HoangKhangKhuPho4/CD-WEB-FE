@@ -146,26 +146,26 @@ const Signin = () => {
   };
 
   const handleFacebookLogin = () => {
-    if (!facebookAppId) {
-      toast.error("Chưa cấu hình NEXT_PUBLIC_FACEBOOK_APP_ID.");
-      return;
-    }
-    if (!fbReady || !window.FB) {
-      toast.error("Facebook SDK đang tải, vui lòng thử lại sau vài giây.");
-      return;
-    }
-    setLoading(true);
-    dispatch(loginStart());
-    window.FB.login(
-      async (response) => {
-        const accessToken = response.authResponse?.accessToken;
-        if (!accessToken) {
-          setLoading(false);
-          dispatch(loginFailure(""));
-          return;
-        }
+  setLoading(true);
+  dispatch(loginStart());
+
+  window.FB.login(
+    (response) => {
+      const accessToken = response.authResponse?.accessToken;
+      
+      if (!accessToken) {
+        setLoading(false);
+        dispatch(loginFailure("Bạn đã hủy đăng nhập Facebook."));
+        toast.error("Đã hủy đăng nhập Facebook");
+        return;
+      }
+
+      // Xử lý gọi API thật về Backend
+      const processFacebookLogin = async () => {
         try {
+          // Sử dụng hàm loginFacebook đã được import ở đầu file
           const body = await loginFacebook(accessToken);
+          
           if (body.data) {
             dispatch(
               loginSuccess({
@@ -174,20 +174,25 @@ const Signin = () => {
                 rememberMe: rememberMeRef.current,
               })
             );
-            toast.success("Đăng nhập thành công!");
+            toast.success("Đăng nhập Facebook thành công!");
             router.push("/");
           }
         } catch (err) {
+          console.error("Lỗi đăng nhập FB:", err);
           const msg = getAuthErrorMessage(err);
           dispatch(loginFailure(msg));
           toast.error(msg);
         } finally {
+          // BẮT BUỘC PHẢI CÓ DÒNG NÀY ĐỂ MỞ KHÓA NÚT DÙ THÀNH CÔNG HAY THẤT BẠI
           setLoading(false);
         }
-      },
-      { scope: "email,public_profile" }
-    );
-  };
+      };
+
+      processFacebookLogin();
+    },
+    { scope: "email,public_profile" }
+  );
+};
 
   return (
     <>
