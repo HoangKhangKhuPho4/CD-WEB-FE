@@ -1,19 +1,30 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 
 import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToCart } from "@/redux/features/cart-slice";
-import { addToWishlist } from "@/redux/features/wishlist-slice";
+import { toggleWishlist, checkIsLiked } from "@/redux/features/wishlist-slice";
 import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { AppDispatch, useAppSelector } from "@/redux/store";
 import Link from "next/link";
 import Image from "next/image";
+import toast from "react-hot-toast";
 
 const SingleListItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
+  const isLiked = useAppSelector(
+    (state) => state.wishlistReducer.likedMap[item.id] || false
+  );
+
+  useEffect(() => {
+    if (isAuthenticated && item.id) {
+      dispatch(checkIsLiked(item.id));
+    }
+  }, [dispatch, isAuthenticated, item.id]);
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
@@ -30,8 +41,17 @@ const SingleListItem = ({ item }: { item: Product }) => {
     );
   };
 
-  const handleItemToWishList = () => {
-    dispatch(addToWishlist({ productId: item.id }));
+  const handleItemToWishList = async () => {
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để thêm vào yêu thích");
+      return;
+    }
+    try {
+      const result = await dispatch(toggleWishlist(item.id)).unwrap();
+      toast.success(result.isLiked ? "Đã thêm vào yêu thích ❤️" : "Đã bỏ yêu thích");
+    } catch (err: unknown) {
+      toast.error(typeof err === "string" ? err : "Có lỗi xảy ra");
+    }
   };
 
   return (
@@ -82,7 +102,11 @@ const SingleListItem = ({ item }: { item: Product }) => {
             <button
               onClick={() => handleItemToWishList()}
               aria-label="button for favorite select"
-              className="flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 text-dark bg-white hover:text-blue"
+              className={`flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 ${
+                isLiked
+                  ? "text-red bg-red-light-6"
+                  : "text-dark bg-white hover:text-blue"
+              }`}
             >
               <svg
                 className="fill-current"

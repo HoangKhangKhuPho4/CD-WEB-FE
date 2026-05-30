@@ -24,7 +24,7 @@ const Testimonials = () => {
 
   return (
     <section className="overflow-hidden pb-16.5">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+      <div className="site-container">
         <div className="">
           <div className="swiper testimonial-carousel common-carousel p-5">
             {/* <!-- section title --> */}
@@ -88,17 +88,21 @@ const Testimonials = () => {
               slidesPerView={3}
               spaceBetween={20}
               breakpoints={{
-                // when window width is >= 640px
                 0: {
                   slidesPerView: 1,
+                  spaceBetween: 16,
                 },
-                1000: {
+                768: {
                   slidesPerView: 2,
-                  // spaceBetween: 4,
+                  spaceBetween: 20,
                 },
-                // when window width is >= 768px
-                1200: {
+                1280: {
                   slidesPerView: 3,
+                  spaceBetween: 24,
+                },
+                1536: {
+                  slidesPerView: 4,
+                  spaceBetween: 28,
                 },
               }}
             >

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import PreLoader from "@/components/Common/PreLoader";
+import { hasAnyPermission, hasPermission } from "@/utils/rbac";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -34,14 +35,15 @@ export default function ProtectedRoute({
       return;
     }
 
-    // 2. (Tùy chọn) Kiểm tra Role/Quyền của User nếu có yêu cầu
-    // Giả sử user có thuộc tính user.role hoặc user.permissions
-    /*
-    if (requiredPermission && user?.role !== requiredPermission) {
-      router.push("/403");
+    if (requiredPermission && !hasPermission(user, requiredPermission)) {
+      router.push("/");
+      return;
     }
-    */
-  }, [isClient, isAuthenticated, router, requiredPermission, user]);
+    if (requiredAny?.length && !hasAnyPermission(user, requiredAny)) {
+      router.push("/");
+      return;
+    }
+  }, [isClient, isAuthenticated, router, requiredPermission, requiredAny, user]);
 
   // Trong lúc chờ check trên client, hiển thị Loading
   if (!isClient || !isAuthenticated) {

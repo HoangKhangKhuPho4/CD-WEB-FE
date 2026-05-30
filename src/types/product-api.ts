@@ -1,15 +1,34 @@
 /** ProductDto.Response — đồng bộ tài liệu backend mục 3 */
-/** Bảng product_types — BE có thể trả camelCase hoặc snake_case */
+/** Bảng product_types — BE trả qua /api/categories hoặc /api/product-types */
 export type ProductTypeDto = {
   id: number;
   name: string;
-  code: string;
+  code?: string;
   isActive?: boolean;
   is_active?: number;
   parentId?: number | null;
   parent_id?: number | null;
   display_order?: number;
   displayOrder?: number;
+};
+
+/** GET /api/categories/list */
+export type CategoryDto = {
+  id: number;
+  name: string;
+  code?: string;
+  isActive?: boolean;
+  displayOrder?: number;
+};
+
+/** GET /api/products/suggest */
+export type ProductSuggestItem = {
+  id: number;
+  name: string;
+  price?: number;
+  imageUrl?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
 };
 export type ProducerDto = { id: number; name: string; code: string };
 export type ImageDto = {

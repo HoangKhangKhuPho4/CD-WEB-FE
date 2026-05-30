@@ -7,7 +7,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   return {
-    title: `Sản phẩm #${id} | NextCommerce`,
+    title: `Sản phẩm #${id} | Bảo Khang Gadget`,
     description: "Chi tiết sản phẩm",
   };
 }

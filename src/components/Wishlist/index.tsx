@@ -44,7 +44,7 @@ export const Wishlist = () => {
       <>
         <Breadcrumb title={"Sản Phẩm Yêu Thích"} pages={["sản phẩm yêu thích"]} />
         <section className="overflow-hidden py-20 bg-gray-2">
-          <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <div className="site-container">
             <div className="bg-white rounded-[10px] shadow-1 p-10 text-center">
               <div className="mb-6">
                 <svg className="mx-auto" width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -69,7 +69,7 @@ export const Wishlist = () => {
     <>
       <Breadcrumb title={"Sản Phẩm Yêu Thích"} pages={["sản phẩm yêu thích"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
-        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+        <div className="site-container">
           <div className="flex flex-wrap items-center justify-between gap-5 mb-7.5">
             <h2 className="font-medium text-dark text-2xl">
               Sản Phẩm Yêu Thích
@@ -117,7 +117,7 @@ export const Wishlist = () => {
             <>
               <div className="bg-white rounded-[10px] shadow-1">
                 <div className="w-full overflow-x-auto">
-                  <div className="min-w-[1170px]">
+                  <div className="w-full min-w-[720px]">
                     {/* table header */}
                     <div className="flex items-center py-5.5 px-10">
                       <div className="min-w-[83px]"></div>

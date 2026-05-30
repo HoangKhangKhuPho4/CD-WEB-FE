@@ -6,10 +6,10 @@ import Image from "next/image";
 const Hero = () => {
   return (
     <section className="overflow-hidden pb-10 lg:pb-12.5 xl:pb-15 pt-57.5 sm:pt-45 lg:pt-30 xl:pt-51.5 bg-[#E5EAF4]">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="flex flex-wrap gap-5">
-          <div className="xl:max-w-[757px] w-full">
-            <div className="relative z-1 rounded-[10px] bg-white overflow-hidden">
+      <div className="site-container">
+        <div className="flex w-full flex-col gap-5 xl:flex-row">
+          <div className="min-w-0 w-full flex-[2] xl:min-h-[420px]">
+            <div className="relative z-1 h-full overflow-hidden rounded-[10px] bg-white">
               {/* <!-- bg shapes --> */}
               <Image
                 src="/images/hero/hero-bg.png"
@@ -23,8 +23,8 @@ const Hero = () => {
             </div>
           </div>
 
-          <div className="xl:max-w-[393px] w-full">
-            <div className="flex flex-col sm:flex-row xl:flex-col gap-5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-5 xl:max-w-[34%]">
+            <div className="flex flex-col gap-5 sm:flex-row xl:flex-col">
               <div className="w-full relative rounded-[10px] bg-white p-4 sm:p-7.5">
                 <div className="flex items-center gap-14">
                   <div>

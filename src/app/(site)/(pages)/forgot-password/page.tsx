@@ -1,9 +1,9 @@
-import ForgotPassword from "@/components/Auth/ForgotPassword";
+﻿import ForgotPassword from "@/components/Auth/ForgotPassword";
 import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | NextCommerce",
+  title: "Forgot Password | Bảo Khang Gadget",
   description: "Reset your account password",
 };
 

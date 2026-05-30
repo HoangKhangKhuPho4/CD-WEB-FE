@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getOrdersApi, cancelOrderApi, getOrderDetailApi } from "@/utils/ordersApi";
 import { useAppSelector } from "@/redux/store";
+import { hasPermission, hasStaffRole } from "@/utils/rbac";
+import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -394,11 +396,13 @@ const Orders = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [selectedOrderCode, setSelectedOrderCode] = useState("");
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
+  const { isAuthenticated, user } = useAppSelector((state) => state.authReducer);
+  const canViewCustomerOrders = hasPermission(user, "USER_ORDER_HISTORY");
+  const isStaff = hasStaffRole(user);
 
   const fetchOrders = useCallback(
     async (page: number = 0, status: string = "") => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || !canViewCustomerOrders) return;
       setLoading(true);
       try {
         const data = await getOrdersApi(page, 10, status || undefined);
@@ -414,12 +418,14 @@ const Orders = () => {
         setLoading(false);
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, canViewCustomerOrders]
   );
 
   useEffect(() => {
-    fetchOrders(0, activeStatus);
-  }, [fetchOrders, activeStatus]);
+    if (canViewCustomerOrders) {
+      fetchOrders(0, activeStatus);
+    }
+  }, [fetchOrders, activeStatus, canViewCustomerOrders]);
 
   const handleTabChange = (status: string) => {
     setActiveStatus(status);
@@ -444,6 +450,22 @@ const Orders = () => {
     return (
       <div className="py-10 px-7.5 text-center">
         <p className="text-gray-500">Vui lòng đăng nhập để xem đơn hàng</p>
+      </div>
+    );
+  }
+
+  if (isStaff && !canViewCustomerOrders) {
+    return (
+      <div className="py-10 px-7.5 text-center space-y-3">
+        <p className="text-gray-600">
+          Tài khoản nhân viên không dùng trang đơn hàng khách hàng.
+        </p>
+        <Link
+          href="/admin/orders"
+          className="inline-flex text-sm font-medium text-blue hover:underline"
+        >
+          Mở Quản lý đơn hàng (Admin)
+        </Link>
       </div>
     );
   }

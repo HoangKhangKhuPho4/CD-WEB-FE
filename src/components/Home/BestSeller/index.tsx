@@ -31,7 +31,7 @@ const BestSeller = () => {
 
   return (
     <section className="overflow-hidden">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+      <div className="site-container">
         {/* <!-- section title --> */}
         <div className="mb-10 flex items-center justify-between">
           <div>
@@ -55,7 +55,7 @@ const BestSeller = () => {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7.5">
+          <div className="grid grid-cols-1 gap-7.5 sm:grid-cols-2 lg:grid-cols-3 2xl:gap-9">
             {products.map((item, key) => (
               <SingleItem item={item} key={item.id || key} />
             ))}

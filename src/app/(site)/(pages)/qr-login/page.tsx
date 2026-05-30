@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -46,7 +46,7 @@ export default function QrLoginPage() {
           clearInterval(countdownRef.current!);
           localStorage.setItem("token", jwtToken);
           localStorage.setItem("user", JSON.stringify(user));
-          dispatch(loginSuccess({ token: jwtToken, user }));
+          dispatch(loginSuccess({ token: jwtToken, user: { ...user, email: user.email ?? "" } }));
           toast.success(`Xin chào, ${user.name}!`);
           router.push("/");
         } else if (s === "EXPIRED") {
@@ -156,7 +156,7 @@ export default function QrLoginPage() {
           <div className="bg-gray-50 rounded-xl p-5 text-left mb-6">
             <p className="text-xs font-semibold text-dark uppercase tracking-wide mb-3">Hướng dẫn</p>
             {[
-              "Mở ứng dụng CD Web trên điện thoại",
+              "Mở ứng dụng Bảo Khang Gadget trên điện thoại",
               "Đăng nhập vào tài khoản của bạn",
               "Nhấn biểu tượng QR và quét mã",
               "Xác nhận đăng nhập trên điện thoại",

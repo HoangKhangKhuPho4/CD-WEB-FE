@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AuthState, User } from "@/types/auth";
+import { normalizeAuthUser } from "@/utils/userApi";
 
 function readStoredAuth(): Pick<AuthState, "user" | "token" | "isAuthenticated"> {
   if (typeof window === "undefined") {
@@ -10,7 +11,7 @@ function readStoredAuth(): Pick<AuthState, "user" | "token" | "isAuthenticated">
   let user: User | null = null;
   if (userJson) {
     try {
-      user = JSON.parse(userJson) as User;
+      user = normalizeAuthUser(JSON.parse(userJson) as User & { fullName?: string });
     } catch {
       user = null;
     }
@@ -42,9 +43,10 @@ export const authSlice = createSlice({
     },
     loginSuccess: (
       state,
-      action: PayloadAction<{ user: User; token: string; rememberMe?: boolean }>
+      action: PayloadAction<{ user: User & { fullName?: string }; token: string; rememberMe?: boolean }>
     ) => {
-      const { user, token, rememberMe = true } = action.payload;
+      const { token, rememberMe = true } = action.payload;
+      const user = normalizeAuthUser(action.payload.user);
       state.loading = false;
       state.isAuthenticated = true;
       state.user = user;
@@ -87,8 +89,16 @@ export const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateUser: (state, action: PayloadAction<User & { fullName?: string }>) => {
+      state.user = normalizeAuthUser(action.payload);
+      if (typeof window !== "undefined") {
+        const storage = sessionStorage.getItem("token") ? sessionStorage : localStorage;
+        storage.setItem("user", JSON.stringify(state.user));
+      }
+    },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, clearError } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, clearError, updateUser } =
+  authSlice.actions;
 export default authSlice.reducer;

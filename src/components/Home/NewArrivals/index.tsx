@@ -30,7 +30,7 @@ const NewArrival = () => {
 
   return (
     <section className="overflow-hidden pt-15">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+      <div className="site-container">
         {/* <!-- section title --> */}
         <div className="mb-7 flex items-center justify-between">
           <div>
@@ -74,7 +74,7 @@ const NewArrival = () => {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 2xl:gap-x-7.5">
             {products.map((item, key) => (
               <ProductItem item={item} key={item.id || key} />
             ))}

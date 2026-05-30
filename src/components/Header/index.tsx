@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { BRAND } from "@/config/brand";
 import { useRouter } from "next/navigation";
 import CustomSelect, { type HeaderSelectOption } from "./CustomSelect";
+import HeaderSearchField from "./HeaderSearchField";
 import { menuData } from "./menuData";
 import Dropdown from "./Dropdown";
 import { useAppSelector } from "@/redux/store";
@@ -11,6 +13,7 @@ import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import Image from "next/image";
 import { getProductCategoryRows } from "@/utils/productCategoryCache";
+import { canAccessAdminPanel } from "@/utils/adminApi";
 
 const ALL_CATEGORIES_OPTION: HeaderSelectOption = { label: "Tất cả danh mục", value: "0" };
 
@@ -22,15 +25,21 @@ const Header = () => {
   const { openCartModal } = useCartModalContext();
 
   const [categoryOptions, setCategoryOptions] = useState<HeaderSelectOption[]>([ALL_CATEGORIES_OPTION]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] =
     useState<HeaderSelectOption>(ALL_CATEGORIES_OPTION);
 
   const product = useAppSelector((state) => state.cartReducer.items);
   const { user, isAuthenticated } = useAppSelector((state) => state.authReducer);
   const totalPrice = useSelector(selectTotalPrice);
+  const showAdminLink = isAuthenticated && canAccessAdminPanel(user);
+  const wishlistCount = useAppSelector(
+    (state) => state.wishlistReducer.totalElements
+  );
 
   useEffect(() => {
     let cancelled = false;
+    setCategoriesLoading(true);
     void getProductCategoryRows().then((rows) => {
       if (cancelled) return;
       const opts: HeaderSelectOption[] = [
@@ -39,6 +48,7 @@ const Header = () => {
       ];
       setCategoryOptions(opts);
       setSelectedCategory((prev) => opts.find((o) => o.value === prev.value) ?? ALL_CATEGORIES_OPTION);
+      setCategoriesLoading(false);
     });
     return () => {
       cancelled = true;
@@ -54,8 +64,8 @@ const Header = () => {
     openCartModal();
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     const params = new URLSearchParams();
     if (selectedCategory.value !== "0") params.set("type", selectedCategory.value);
     const q = searchQuery.trim();
@@ -63,6 +73,9 @@ const Header = () => {
     const qs = params.toString();
     router.push(qs ? `/shop-with-sidebar?${qs}` : "/shop-with-sidebar");
   };
+
+  const selectedProductTypeId =
+    selectedCategory.value !== "0" ? Number(selectedCategory.value) : null;
 
   // Sticky menu
   const handleStickyMenu = () => {
@@ -84,75 +97,47 @@ const Header = () => {
         stickyMenu && "shadow"
       }`}
     >
-      <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
-        {/* <!-- header top start --> */}
+      <div className="site-container-fluid">
         <div
-          className={`flex flex-col lg:flex-row gap-5 items-end lg:items-center xl:justify-between ease-out duration-200 ${
+          className={`flex w-full flex-col gap-5 ease-out duration-200 lg:flex-row lg:items-center lg:justify-between ${
             stickyMenu ? "py-4" : "py-6"
           }`}
         >
-          {/* <!-- header top left --> */}
-          <div className="xl:w-auto flex-col sm:flex-row w-full flex sm:justify-between sm:items-center gap-5 sm:gap-10">
-            <Link className="flex-shrink-0" href="/">
+          <div className="flex min-w-0 flex-1 flex-col gap-5 sm:flex-row sm:items-center sm:gap-6 lg:gap-8 xl:gap-10">
+            <Link className="shrink-0 flex items-center py-0.5" href="/">
               <Image
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={219}
-                height={36}
+                src={BRAND.logoFull}
+                alt={BRAND.name}
+                width={320}
+                height={56}
+                priority
+                className="h-11 w-auto min-w-[200px] sm:h-12 sm:min-w-[240px] lg:h-[52px] xl:h-14 xl:min-w-[280px]"
               />
             </Link>
 
-            <div className="max-w-[475px] w-full">
+            <div className="min-w-0 w-full flex-1 lg:max-w-3xl xl:max-w-4xl 2xl:max-w-[780px]">
               <form onSubmit={handleSearchSubmit}>
-                <div className="flex items-center">
+                <div className="flex w-full items-center">
                   <CustomSelect
                     options={categoryOptions}
                     value={selectedCategoryForSelect}
                     onChange={(opt) => setSelectedCategory(opt)}
+                    loading={categoriesLoading}
+                    loadingLabel="Đang tải..."
                   />
 
-                  <div className="relative max-w-[333px] sm:min-w-[333px] w-full">
-                    {/* <!-- divider --> */}
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 inline-block w-px h-5.5 bg-gray-4"></span>
-                    <input
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      value={searchQuery}
-                      type="search"
-                      name="search"
-                      id="search"
-                      placeholder="Tôi đang tìm kiếm..."
-                      autoComplete="off"
-                      className="custom-search w-full rounded-r-[5px] bg-gray-1 !border-l-0 border border-gray-3 py-2.5 pl-4 pr-10 outline-none ease-in duration-200"
-                    />
-
-                    <button
-                      type="submit"
-                      id="search-btn"
-                      aria-label="Tìm kiếm"
-                      className="flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 ease-in duration-200 hover:text-blue"
-                    >
-                      <svg
-                        className="fill-current"
-                        width="18"
-                        height="18"
-                        viewBox="0 0 18 18"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M17.2687 15.6656L12.6281 11.8969C14.5406 9.28123 14.3437 5.5406 11.9531 3.1781C10.6875 1.91248 8.99995 1.20935 7.19995 1.20935C5.39995 1.20935 3.71245 1.91248 2.44683 3.1781C-0.168799 5.79373 -0.168799 10.0687 2.44683 12.6844C3.71245 13.95 5.39995 14.6531 7.19995 14.6531C8.91558 14.6531 10.5187 14.0062 11.7843 12.8531L16.4812 16.65C16.5937 16.7344 16.7343 16.7906 16.875 16.7906C17.0718 16.7906 17.2406 16.7062 17.3531 16.5656C17.5781 16.2844 17.55 15.8906 17.2687 15.6656ZM7.19995 13.3875C5.73745 13.3875 4.38745 12.825 3.34683 11.7844C1.20933 9.64685 1.20933 6.18748 3.34683 4.0781C4.38745 3.03748 5.73745 2.47498 7.19995 2.47498C8.66245 2.47498 10.0125 3.03748 11.0531 4.0781C13.1906 6.2156 13.1906 9.67498 11.0531 11.7844C10.0406 12.825 8.66245 13.3875 7.19995 13.3875Z"
-                          fill=""
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                  <HeaderSearchField
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    productTypeId={selectedProductTypeId}
+                    onSubmit={() => handleSearchSubmit()}
+                  />
                 </div>
               </form>
             </div>
           </div>
 
-          {/* <!-- header top right --> */}
-          <div className="flex w-full lg:w-auto items-center gap-7.5">
+          <div className="flex w-full shrink-0 items-center justify-between gap-5 sm:justify-end lg:w-auto lg:gap-7 xl:gap-8 2xl:gap-10">
             <div className="hidden xl:flex items-center gap-3.5">
               <svg
                 width="24"
@@ -194,6 +179,14 @@ const Header = () => {
 
             <div className="flex w-full lg:w-auto justify-between items-center gap-5">
               <div className="flex items-center gap-5">
+                {showAdminLink ? (
+                  <Link
+                    href="/admin"
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-[#3C50E0] bg-[#3C50E0]/8 border border-[#3C50E0]/20 hover:bg-[#3C50E0]/15 transition-colors"
+                  >
+                    Quản trị
+                  </Link>
+                ) : null}
                 <Link 
                   href={isAuthenticated ? "/my-account" : "/signin"} 
                   className="flex items-center gap-2.5"
@@ -325,22 +318,20 @@ const Header = () => {
             </div>
           </div>
         </div>
-        {/* <!-- header top end --> */}
       </div>
 
       <div className="border-t border-gray-3">
-        <div className="max-w-[1170px] mx-auto px-4 sm:px-7.5 xl:px-0">
-          <div className="flex items-center justify-between">
-            {/* <!--=== Main Nav Start ===--> */}
+        <div className="site-container-fluid">
+          <div className="flex w-full items-center justify-between">
             <div
-              className={`w-[288px] absolute right-4 top-full xl:static xl:w-auto h-0 xl:h-auto invisible xl:visible xl:flex items-center justify-between ${
+              className={`absolute right-5 top-full z-50 h-0 w-[min(288px,calc(100vw-2.5rem))] invisible xl:static xl:visible xl:flex xl:h-auto xl:w-auto xl:flex-1 xl:items-center xl:justify-start ${
                 navigationOpen &&
                 `!visible bg-white shadow-lg border border-gray-3 !h-auto max-h-[400px] overflow-y-scroll rounded-md p-5`
               }`}
             >
               {/* <!-- Main Nav Start --> */}
               <nav>
-                <ul className="flex xl:items-center flex-col xl:flex-row gap-5 xl:gap-6">
+                <ul className="flex flex-col gap-5 xl:flex-row xl:items-center xl:gap-7 2xl:gap-9">
                   {menuData.map((menuItem, i) =>
                     menuItem.submenu ? (
                       <Dropdown
@@ -371,8 +362,8 @@ const Header = () => {
             {/* // <!--=== Main Nav End ===--> */}
 
             {/* // <!--=== Nav Right Start ===--> */}
-            <div className="hidden xl:block">
-              <ul className="flex items-center gap-5.5">
+            <div className="hidden shrink-0 xl:block">
+              <ul className="flex items-center gap-6 2xl:gap-8">
                 <li className="py-4">
                   <a
                     href="#"
@@ -403,6 +394,7 @@ const Header = () => {
                   <Link
                     href="/wishlist"
                     className="flex items-center gap-1.5 font-medium text-custom-sm text-dark hover:text-blue"
+                    title="Danh sách yêu thích"
                   >
                     <svg
                       className="fill-current"
@@ -418,6 +410,11 @@ const Header = () => {
                       />
                     </svg>
                     Danh sách yêu thích
+                    {isAuthenticated && wishlistCount > 0 ? (
+                      <span className="ml-1 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-blue px-1 text-2xs text-white">
+                        {wishlistCount > 99 ? "99+" : wishlistCount}
+                      </span>
+                    ) : null}
                   </Link>
                 </li>
               </ul>

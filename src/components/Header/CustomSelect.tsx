@@ -6,9 +6,17 @@ type CustomSelectProps = {
   options: HeaderSelectOption[];
   value?: HeaderSelectOption;
   onChange?: (option: HeaderSelectOption) => void;
+  loading?: boolean;
+  loadingLabel?: string;
 };
 
-const CustomSelect = ({ options, value: controlledValue, onChange }: CustomSelectProps) => {
+const CustomSelect = ({
+  options,
+  value: controlledValue,
+  onChange,
+  loading = false,
+  loadingLabel = "Đang tải...",
+}: CustomSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [internalSelected, setInternalSelected] = useState(options[0]);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -33,7 +41,10 @@ const CustomSelect = ({ options, value: controlledValue, onChange }: CustomSelec
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const toggleDropdown = () => setIsOpen((v) => !v);
+  const toggleDropdown = () => {
+    if (loading) return;
+    setIsOpen((v) => !v);
+  };
 
   const handleOptionClick = (option: HeaderSelectOption) => {
     if (onChange) onChange(option);
@@ -48,13 +59,14 @@ const CustomSelect = ({ options, value: controlledValue, onChange }: CustomSelec
       style={{ width: "200px" }}
     >
       <div
-        className={`select-selected whitespace-nowrap ${isOpen ? "select-arrow-active" : ""}`}
+        className={`select-selected whitespace-nowrap ${isOpen ? "select-arrow-active" : ""} ${loading ? "opacity-60 cursor-wait" : ""}`}
         onClick={toggleDropdown}
       >
-        {selectedOption.label}
+        {loading ? loadingLabel : selectedOption.label}
       </div>
       <div className={`select-items ${isOpen ? "" : "select-hide"}`}>
-        {options.map((option, index) => (
+        {!loading &&
+          options.map((option, index) => (
           <div
             key={`${option.value}-${index}`}
             onClick={() => handleOptionClick(option)}

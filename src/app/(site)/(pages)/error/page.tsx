@@ -1,10 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import Error from "@/components/Error";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "Error Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Error Page for NextCommerce Template",
+  title: "Error Page | Bảo Khang Gadget",
+  description: "This is Error Page - Bảo Khang Gadget",
   // other metadata
 };
 

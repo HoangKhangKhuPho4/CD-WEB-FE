@@ -24,6 +24,8 @@ export interface User {
   lastLoginAt?: string | null;
   status?: number;
   roles?: Role[];
+  /** Permission codes from backend (union of all roles). */
+  permissions?: string[];
 }
 
 export interface AuthResponse {

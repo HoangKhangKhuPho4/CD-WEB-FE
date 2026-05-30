@@ -1,38 +1,36 @@
-import type { ProductTypeDto } from "@/types/product-api";
-import { fetchProductTypes } from "@/utils/productApi";
+import type { CategoryDto, ProductTypeDto } from "@/types/product-api";
+import { fetchCategories } from "@/utils/productApi";
 
 export type ProductCategoryRow = { id: number; name: string };
 
-function productTypeRowIsActive(t: ProductTypeDto): boolean {
-  if (typeof t.isActive === "boolean") return t.isActive;
-  if (typeof t.is_active === "number") return t.is_active === 1;
-  return true;
+function categoryIsActive(c: CategoryDto): boolean {
+  return c.isActive !== false;
 }
 
-function sortProductTypes(a: ProductTypeDto, b: ProductTypeDto): number {
-  const ao = a.display_order ?? a.displayOrder ?? a.id;
-  const bo = b.display_order ?? b.displayOrder ?? b.id;
+function sortCategories(a: CategoryDto, b: CategoryDto): number {
+  const ao = a.displayOrder ?? a.id;
+  const bo = b.displayOrder ?? b.id;
   return ao - bo;
 }
 
-function mapTypesToRows(types: ProductTypeDto[]): ProductCategoryRow[] {
-  const active = types.filter(productTypeRowIsActive);
-  const source = active.length > 0 ? active : types;
-  return source.sort(sortProductTypes).map((t) => ({ id: t.id, name: t.name }));
+function mapToRows(categories: CategoryDto[]): ProductCategoryRow[] {
+  const active = categories.filter(categoryIsActive);
+  const source = active.length > 0 ? active : categories;
+  return source.sort(sortCategories).map((c) => ({ id: c.id, name: c.name }));
 }
 
 let resolvedRows: ProductCategoryRow[] | null = null;
 let inFlight: Promise<ProductCategoryRow[]> | null = null;
 
 /**
- * Danh mục từ GET /api/product-types — cache theo phiên, gộp request trùng (Header + Shop).
+ * Danh mục từ GET /api/categories/list — cache theo phiên (Header + Shop).
  */
 export async function getProductCategoryRows(): Promise<ProductCategoryRow[]> {
   if (resolvedRows) return resolvedRows;
   if (inFlight) return inFlight;
-  inFlight = fetchProductTypes()
-    .then((types) => {
-      const rows = mapTypesToRows(types);
+  inFlight = fetchCategories()
+    .then((categories) => {
+      const rows = mapToRows(categories);
       resolvedRows = rows;
       return rows;
     })
@@ -45,3 +43,12 @@ export async function getProductCategoryRows(): Promise<ProductCategoryRow[]> {
     });
   return inFlight;
 }
+
+/** Xóa cache sau khi admin cập nhật danh mục (tùy chọn gọi từ admin). */
+export function invalidateProductCategoryCache(): void {
+  resolvedRows = null;
+  inFlight = null;
+}
+
+/** @deprecated */
+export type { ProductTypeDto };

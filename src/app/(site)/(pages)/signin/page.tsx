@@ -1,9 +1,9 @@
-import Signin from "@/components/Auth/Signin";
+﻿import Signin from "@/components/Auth/Signin";
 import React, { Suspense } from "react";
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "Signin Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Signin Page for NextCommerce Template",
+  title: "Signin Page | Bảo Khang Gadget",
+  description: "This is Signin Page - Bảo Khang Gadget",
   // other metadata
 };
 

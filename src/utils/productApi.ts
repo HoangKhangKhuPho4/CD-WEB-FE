@@ -1,9 +1,11 @@
 import api from "./api";
 import type { ApiResponse, Page } from "@/types/api";
 import type {
+  CategoryDto,
   ProducerDto,
   ProductResponse,
   ProductSearchParams,
+  ProductSuggestItem,
   ProductTypeDto,
 } from "@/types/product-api";
 
@@ -16,12 +18,54 @@ function unwrapData<T>(res: { data: ApiResponse<T> }): T | null {
 }
 
 /**
- * Danh sách loại sản phẩm — GET /api/product-types
- * (Nếu BE dùng path khác, chỉnh tại đây.)
+ * Danh sách danh mục active — GET /api/categories/list
+ * (Fallback GET /api/product-types nếu cần tương thích cũ.)
  */
-export const fetchProductTypes = async (): Promise<ProductTypeDto[]> => {
+export const fetchCategories = async (): Promise<CategoryDto[]> => {
   try {
-    const res = await api.get<ApiResponse<ProductTypeDto[]>>("/product-types");
+    const res = await api.get<ApiResponse<CategoryDto[]>>("/categories/list");
+    return unwrapData(res) ?? [];
+  } catch {
+    try {
+      const res = await api.get<ApiResponse<CategoryDto[]>>("/product-types");
+      return unwrapData(res) ?? [];
+    } catch {
+      return [];
+    }
+  }
+};
+
+/** @deprecated Dùng fetchCategories — giữ alias cho module cũ */
+export const fetchProductTypes = async (): Promise<ProductTypeDto[]> => {
+  const rows = await fetchCategories();
+  return rows.map((c) => ({
+    id: c.id,
+    name: c.name,
+    code: c.code ?? "",
+    isActive: c.isActive,
+    displayOrder: c.displayOrder,
+  }));
+};
+
+/**
+ * Gợi ý tìm kiếm — GET /api/products/suggest
+ * keyword ≥ 2 ký tự; product_type_id tùy chọn (dropdown danh mục header).
+ */
+export const fetchProductSuggestions = async (params: {
+  keyword: string;
+  product_type_id?: number;
+  limit?: number;
+}): Promise<ProductSuggestItem[]> => {
+  const kw = params.keyword.trim();
+  if (kw.length < 2) return [];
+  try {
+    const res = await api.get<ApiResponse<ProductSuggestItem[]>>("/products/suggest", {
+      params: {
+        keyword: kw,
+        product_type_id: params.product_type_id,
+        limit: params.limit ?? 8,
+      },
+    });
     return unwrapData(res) ?? [];
   } catch {
     return [];

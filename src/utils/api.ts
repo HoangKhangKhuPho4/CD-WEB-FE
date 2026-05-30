@@ -66,6 +66,14 @@ api.interceptors.response.use(
         }
         
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        try {
+          const { triggerAuthUserRefresh } = await import("./authSync");
+          await triggerAuthUserRefresh();
+        } catch {
+          /* profile refresh optional */
+        }
+
         return api(originalRequest);
       } catch (refreshError) {
         // Nếu refresh cũng lỗi (hết hạn refresh token) -> Đăng xuất
@@ -324,14 +332,12 @@ export const authService = {
 };
 
 export const profileService = {
-  getProfile: () =>
-    api.get<ApiResponse<User>>('/user/profile'),
+  getProfile: () => api.get<ApiResponse<User>>("/users/me"),
 
-  updateProfile: (data: UpdateProfilePayload) =>
-    api.put<ApiResponse<User>>('/user/profile', data),
+  updateProfile: (data: UpdateProfilePayload) => api.put<ApiResponse<User>>("/users/me", data),
 
   changePassword: (data: ChangePasswordPayload) =>
-    api.put<ApiResponse<void>>('/user/profile/change-password', data),
+    api.put<ApiResponse<void>>("/users/change-password", data),
 };
 
 export const addressService = {

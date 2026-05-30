@@ -20,6 +20,12 @@ export const menuData: Menu[] = [
     path: "/contact",
   },
   {
+    id: 4,
+    title: "Bảo Hành",
+    newTab: false,
+    path: "/bao-hanh",
+  },
+  {
     id: 6,
     title: "Trang",
     newTab: false,
@@ -78,6 +84,12 @@ export const menuData: Menu[] = [
         title: "Liên Hệ",
         newTab: false,
         path: "/contact",
+      },
+      {
+        id: 71,
+        title: "Tra Cứu Bảo Hành",
+        newTab: false,
+        path: "/bao-hanh",
       },
       {
         id: 62,

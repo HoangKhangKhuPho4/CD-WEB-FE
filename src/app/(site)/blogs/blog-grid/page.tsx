@@ -1,10 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import BlogGrid from "@/components/BlogGrid";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "Blog Grid Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Blog Grid Page for NextCommerce Template",
+  title: "Blog Grid Page | Bảo Khang Gadget",
+  description: "This is Blog Grid Page - Bảo Khang Gadget",
   // other metadata
 };
 

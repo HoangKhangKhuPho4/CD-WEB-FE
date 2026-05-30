@@ -1,11 +1,11 @@
-import MyAccount from "@/components/MyAccount";
+﻿import MyAccount from "@/components/MyAccount";
 import ProtectedRoute from "@/components/Auth/ProtectedRoute";
 import React from "react";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "My Account | NextCommerce Nextjs E-commerce template",
-  description: "This is My Account page for NextCommerce Template",
+  title: "My Account | Bảo Khang Gadget",
+  description: "This is My Account page - Bảo Khang Gadget",
   // other metadata
 };
 

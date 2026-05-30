@@ -104,6 +104,15 @@ const config: Config = {
       ...defaultTheme.screens,
     },
     extend: {
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0", transform: "scale(0.95) translateY(10px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+      },
+      animation: {
+        fadeIn: "fadeIn 0.2s ease-out",
+      },
       fontSize: {
         "2xs": ["10px", "17px"],
         "heading-1": ["60px", "72px"],
@@ -221,6 +230,7 @@ const config: Config = {
         30: "7.5rem",
         40: "10rem",
         50: "12.5rem",
+        site: "82.5rem", /* 1320px — đồng bộ .site-container */
       },
       zIndex: {
         999999: "999999",

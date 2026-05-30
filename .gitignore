@@ -15,6 +15,9 @@
 # production
 /build
 
+# Qodo AI (local tooling — không đưa lên repo)
+.qodo/
+
 # misc
 .DS_Store
 *.pem

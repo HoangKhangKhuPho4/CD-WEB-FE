@@ -4,7 +4,7 @@ import Image from "next/image";
 const PromoBanner = () => {
   return (
     <section className="overflow-hidden py-20">
-      <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+      <div className="site-container">
         {/* <!-- promo banner big --> */}
         <div className="relative z-1 overflow-hidden rounded-lg bg-[#F5F5F7] py-12.5 lg:py-17.5 xl:py-22.5 px-4 sm:px-7.5 lg:px-14 xl:px-19 mb-7.5">
           <div className="max-w-[550px] w-full">
@@ -31,7 +31,7 @@ const PromoBanner = () => {
           <Image
             src="/images/promo/promo-01.png"
             alt="promo img"
-            className="absolute bottom-0 right-4 lg:right-26 -z-1"
+            className="absolute bottom-0 right-4 -z-1 lg:right-16 xl:right-24 2xl:right-32"
             width={274}
             height={350}
           />

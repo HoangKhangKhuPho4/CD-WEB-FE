@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { loginStart, loginSuccess, loginFailure } from "@/redux/features/auth-slice";
 import { getAuthErrorMessage, login, loginFacebook, loginGoogle } from "@/utils/authApi";
+import { getPostLoginPath } from "@/utils/adminApi";
 import { toast } from "react-hot-toast";
 
 const Signin = () => {
@@ -55,7 +56,7 @@ const Signin = () => {
             })
           );
           toast.success("Đăng nhập thành công!");
-          router.push("/");
+          router.push(getPostLoginPath(body.data.user, searchParams.get("redirect")));
         }
       } catch (err) {
         const msg = getAuthErrorMessage(err);
@@ -65,7 +66,7 @@ const Signin = () => {
         setLoading(false);
       }
     },
-    [dispatch, router]
+    [dispatch, router, searchParams]
   );
 
   useEffect(() => {
@@ -131,7 +132,7 @@ const Signin = () => {
           })
         );
         toast.success("Đăng nhập thành công!");
-        router.push("/");
+        router.push(getPostLoginPath(body.data.user, searchParams.get("redirect")));
       }
     } catch (err) {
       const friendly =
@@ -175,7 +176,7 @@ const Signin = () => {
               })
             );
             toast.success("Đăng nhập Facebook thành công!");
-            router.push("/");
+            router.push(getPostLoginPath(body.data.user, searchParams.get("redirect")));
           }
         } catch (err) {
           console.error("Lỗi đăng nhập FB:", err);
@@ -206,7 +207,7 @@ const Signin = () => {
       <div id="fb-root" />
       <Breadcrumb title={"Đăng Nhập"} pages={["Đăng Nhập"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
-        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+        <div className="site-container">
           <div className="max-w-[570px] w-full mx-auto rounded-xl bg-white shadow-1 p-4 sm:p-7.5 xl:p-11">
             <div className="text-center mb-11">
               <h2 className="font-semibold text-xl sm:text-2xl xl:text-heading-5 text-dark mb-1.5">

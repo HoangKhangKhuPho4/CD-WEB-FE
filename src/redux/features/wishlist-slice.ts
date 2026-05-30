@@ -227,6 +227,9 @@ export const wishlist = createSlice({
     builder
       .addCase(addToWishlist.fulfilled, (state, action) => {
         state.likedMap[action.payload.productId] = true;
+        if (!state.items.some((i) => i.product?.id === action.payload.productId)) {
+          state.totalElements += 1;
+        }
       });
 
     // checkIsLiked
@@ -240,9 +243,13 @@ export const wishlist = createSlice({
       .addCase(removeByProductId.fulfilled, (state, action) => {
         const productId = action.payload;
         state.likedMap[productId] = false;
+        const hadItem = state.items.some((item) => item.product?.id === productId);
         state.items = state.items.filter(
           (item) => item.product?.id !== productId
         );
+        if (hadItem && state.totalElements > 0) {
+          state.totalElements -= 1;
+        }
       });
 
     // removeByWishlistId

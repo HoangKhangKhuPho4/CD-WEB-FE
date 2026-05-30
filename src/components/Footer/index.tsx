@@ -1,17 +1,19 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { BRAND } from "@/config/brand";
 
 const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="overflow-hidden">
-      <div className="max-w-[1170px] mx-auto px-4 sm:px-8 xl:px-0">
-        {/* <!-- footer menu start --> */}
-        <div className="flex flex-wrap xl:flex-nowrap gap-10 xl:gap-19 xl:justify-between pt-17.5 xl:pt-22.5 pb-10 xl:pb-15">
-          <div className="max-w-[330px] w-full">
-            <h2 className="mb-7.5 text-custom-1 font-medium text-dark">
-              Trợ Giúp & Hỗ Trợ
+    <footer className="overflow-hidden border-t border-gray-3/80 bg-white">
+      <div className="site-container-fluid">
+        <div className="grid grid-cols-1 gap-10 pt-14 pb-12 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-12 xl:grid-cols-4 xl:gap-x-10 xl:pt-20 xl:pb-16 2xl:gap-x-14">
+          {/* Cột 1: liên hệ & mạng xã hội */}
+          <div className="min-w-0 xl:pr-4">
+            <h2 className="mb-6 text-custom-1 font-medium text-dark">
+              Trợ giúp & hỗ trợ
             </h2>
 
             <ul className="flex flex-col gap-3">
@@ -32,7 +34,7 @@ const Footer = () => {
                     />
                   </svg>
                 </span>
-                685 Market Street,Las Vegas, LA 95820,United States.
+                123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh, Việt Nam
               </li>
 
               <li>
@@ -193,12 +195,11 @@ const Footer = () => {
                 </svg>
               </a>
             </div>
-            {/* <!-- Social Links end --> */}
           </div>
 
-          <div className="w-full sm:w-auto">
-            <h2 className="mb-7.5 text-custom-1 font-medium text-dark">
-              Tài Khoản
+          <div className="min-w-0">
+            <h2 className="mb-6 text-custom-1 font-medium text-dark">
+              Tài khoản
             </h2>
 
             <ul className="flex flex-col gap-3.5">
@@ -218,9 +219,9 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/wishlist">
                   Danh sách yêu thích
-                </a>
+                </Link>
               </li>
               <li>
                 <a className="ease-out duration-200 hover:text-blue" href="#">
@@ -230,9 +231,9 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="w-full sm:w-auto">
-            <h2 className="mb-7.5 text-custom-1 font-medium text-dark">
-              Liên Kết Nhanh
+          <div className="min-w-0">
+            <h2 className="mb-6 text-custom-1 font-medium text-dark">
+              Liên kết nhanh
             </h2>
 
             <ul className="flex flex-col gap-3">
@@ -252,28 +253,33 @@ const Footer = () => {
                 </a>
               </li>
               <li>
+                <Link className="ease-out duration-200 hover:text-blue" href="/bao-hanh">
+                  Tra cứu bảo hành
+                </Link>
+              </li>
+              <li>
                 <a className="ease-out duration-200 hover:text-blue" href="#">
                   Câu hỏi thường gặp
                 </a>
               </li>
               <li>
-                <a className="ease-out duration-200 hover:text-blue" href="#">
+                <Link className="ease-out duration-200 hover:text-blue" href="/contact">
                   Liên hệ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
 
-          <div className="w-full sm:w-auto">
-            <h2 className="mb-7.5 text-custom-1 font-medium text-dark lg:text-right">
-              Tải Ứng Dụng
+          <div className="min-w-0">
+            <h2 className="mb-6 text-custom-1 font-medium text-dark">
+              Tải ứng dụng
             </h2>
 
-            <p className="lg:text-right text-custom-sm mb-4">
-              Tiết kiệm $3 với Ứng dụng & Chỉ dành cho người dùng mới
+            <p className="mb-4 text-custom-sm text-dark-3 leading-relaxed">
+              Ưu đãi dành riêng khi mua sắm trên app di động
             </p>
 
-            <ul className="flex flex-col lg:items-end gap-3">
+            <ul className="flex flex-col gap-3">
               <li>
                 <a
                   className="inline-flex items-center gap-3 py-[9px] pl-4 pr-7.5 text-white rounded-md bg-dark ease-out duration-200 hover:bg-opacity-95"
@@ -330,15 +336,13 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        {/* <!-- footer menu end --> */}
       </div>
 
-      {/* <!-- footer bottom start --> */}
-      <div className="py-5 xl:py-7.5 bg-gray-1">
-        <div className="max-w-[1170px] mx-auto px-4 sm:px-8 xl:px-0">
-          <div className="flex gap-5 flex-wrap items-center justify-between">
+      <div className="border-t border-gray-3/60 bg-gray-1 py-6 lg:py-8">
+        <div className="site-container-fluid">
+          <div className="flex w-full flex-wrap items-center justify-between gap-5 gap-y-4">
             <p className="text-dark font-medium">
-              &copy; {year}. Bản quyền thuộc về PimjoLabs.
+              {BRAND.copyright(year)}
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -390,7 +394,6 @@ const Footer = () => {
           </div>
         </div>
       </div>
-      {/* <!-- footer bottom end --> */}
     </footer>
   );
 };
