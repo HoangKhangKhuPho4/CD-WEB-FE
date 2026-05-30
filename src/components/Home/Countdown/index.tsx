@@ -1,30 +1,63 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { fetchFeaturedProducts } from "@/utils/productApi";
+import { mapBackendProductToFrontend } from "@/utils/productMapper";
+import type { Product } from "@/types/product";
+
+function formatVnd(amount: number) {
+  return amount.toLocaleString("vi-VN") + "₫";
+}
 
 const CounDown = () => {
   const [days, setDays] = useState(0);
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
+  const [product, setProduct] = useState<Product | null>(null);
 
-  const deadline = "December, 31, 2024";
-
-  const getTime = () => {
-    const time = Date.parse(deadline) - Date.now();
-
-    setDays(Math.floor(time / (1000 * 60 * 60 * 24)));
-    setHours(Math.floor((time / (1000 * 60 * 60)) % 24));
-    setMinutes(Math.floor((time / 1000 / 60) % 60));
-    setSeconds(Math.floor((time / 1000) % 60));
-  };
+  const deadline = useMemo(() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 7);
+    end.setHours(23, 59, 59, 0);
+    return end.getTime();
+  }, []);
 
   useEffect(() => {
-    // @ts-ignore
-    const interval = setInterval(() => getTime(deadline), 1000);
-
-    return () => clearInterval(interval);
+    void fetchFeaturedProducts(0, 1).then(async (rows) => {
+      if (rows[0]) {
+        setProduct(mapBackendProductToFrontend(rows[0]));
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    const tick = () => {
+      const time = deadline - Date.now();
+      if (time <= 0) {
+        setDays(0);
+        setHours(0);
+        setMinutes(0);
+        setSeconds(0);
+        return;
+      }
+      setDays(Math.floor(time / (1000 * 60 * 60 * 24)));
+      setHours(Math.floor((time / (1000 * 60 * 60)) % 24));
+      setMinutes(Math.floor((time / 1000 / 60) % 60));
+      setSeconds(Math.floor((time / 1000) % 60));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  const title = product?.title ?? "Ưu đãi sản phẩm nổi bật";
+  const price = product?.discountedPrice ?? 0;
+  const oldPrice = product?.price ?? 0;
+  const productLink = product ? `/shop-details/${product.id}` : "/shop-with-sidebar";
+  const productImg =
+    product?.imgs?.previews?.[0] ?? "/images/countdown/countdown-01.png";
 
   return (
     <section className="overflow-hidden py-20">
@@ -36,93 +69,55 @@ const CounDown = () => {
             </span>
 
             <h2 className="font-bold text-dark text-xl lg:text-heading-4 xl:text-heading-3 mb-3">
-              Nâng Tầm Trải Nghiệm Âm Nhạc Của Bạn
+              {title}
             </h2>
 
-            <p>Tai nghe PC có dây Havit H206d.</p>
+            {product && (
+              <p className="text-dark font-semibold">
+                {formatVnd(price)}
+                {oldPrice > price && (
+                  <span className="ml-2 text-gray-500 line-through font-normal text-sm">
+                    {formatVnd(oldPrice)}
+                  </span>
+                )}
+              </p>
+            )}
 
-            {/* <!-- Countdown timer --> */}
-            <div
-              className="flex flex-wrap gap-6 mt-6"
-              x-data="timer()"
-              x-init="countdown()"
-            >
-              {/* <!-- timer day --> */}
-              <div>
-                <span
-                  className="min-w-[64px] h-14.5 font-semibold text-xl lg:text-3xl text-dark rounded-lg flex items-center justify-center bg-white shadow-2 px-4 mb-2"
-                  x-text="days"
-                >
-                  {" "}
-                  {days < 10 ? "0" + days : days}{" "}
-                </span>
-                <span className="block text-custom-sm text-dark text-center">
-                  Ngày
-                </span>
-              </div>
-
-              {/* <!-- timer hours --> */}
-              <div>
-                <span
-                  className="min-w-[64px] h-14.5 font-semibold text-xl lg:text-3xl text-dark rounded-lg flex items-center justify-center bg-white shadow-2 px-4 mb-2"
-                  x-text="hours"
-                >
-                  {" "}
-                  {hours < 10 ? "0" + hours : hours}{" "}
-                </span>
-                <span className="block text-custom-sm text-dark text-center">
-                  Giờ
-                </span>
-              </div>
-
-              {/* <!-- timer minutes --> */}
-              <div>
-                <span
-                  className="min-w-[64px] h-14.5 font-semibold text-xl lg:text-3xl text-dark rounded-lg flex items-center justify-center bg-white shadow-2 px-4 mb-2"
-                  x-text="minutes"
-                >
-                  {minutes < 10 ? "0" + minutes : minutes}{" "}
-                </span>
-                <span className="block text-custom-sm text-dark text-center">
-                  Phút
-                </span>
-              </div>
-
-              {/* <!-- timer seconds --> */}
-              <div>
-                <span
-                  className="min-w-[64px] h-14.5 font-semibold text-xl lg:text-3xl text-dark rounded-lg flex items-center justify-center bg-white shadow-2 px-4 mb-2"
-                  x-text="seconds"
-                >
-                  {seconds < 10 ? "0" + seconds : seconds}{" "}
-                </span>
-                <span className="block text-custom-sm text-dark text-center">
-                  Giây
-                </span>
-              </div>
+            <div className="flex flex-wrap gap-6 mt-6">
+              {[
+                { v: days, label: "Ngày" },
+                { v: hours, label: "Giờ" },
+                { v: minutes, label: "Phút" },
+                { v: seconds, label: "Giây" },
+              ].map(({ v, label }) => (
+                <div key={label}>
+                  <span className="min-w-[64px] h-14.5 font-semibold text-xl lg:text-3xl text-dark rounded-lg flex items-center justify-center bg-white shadow-2 px-4 mb-2">
+                    {v < 10 ? `0${v}` : v}
+                  </span>
+                  <span className="block text-custom-sm text-dark text-center">{label}</span>
+                </div>
+              ))}
             </div>
-            {/* <!-- Countdown timer ends --> */}
 
-            <a
-              href="#"
+            <Link
+              href={productLink}
               className="inline-flex font-medium text-custom-sm text-white bg-blue py-3 px-9.5 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
             >
               Xem Ngay!
-            </a>
+            </Link>
           </div>
 
-          {/* <!-- bg shapes --> */}
           <Image
             src="/images/countdown/countdown-bg.png"
-            alt="bg shapes"
+            alt=""
             className="hidden sm:block absolute right-0 bottom-0 -z-1"
             width={737}
             height={482}
           />
           <Image
-            src="/images/countdown/countdown-01.png"
-            alt="product"
-            className="hidden lg:block absolute right-4 xl:right-33 bottom-4 xl:bottom-10 -z-1"
+            src={productImg}
+            alt={title}
+            className="hidden lg:block absolute right-4 xl:right-33 bottom-4 xl:bottom-10 -z-1 object-contain"
             width={411}
             height={376}
           />

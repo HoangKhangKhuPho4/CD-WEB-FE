@@ -616,6 +616,24 @@ export const adminOrderApi = {
       orderDetailId,
       imeis,
     }),
+
+  refundVnpay: (orderId: number) =>
+    api.post<
+      ApiResponse<{
+        success: boolean;
+        orderCode?: string;
+        message?: string;
+      }>
+    >(`/admin/orders/${orderId}/refund-vnpay`),
+
+  ghnPrintLabel: (orderId: number) =>
+    api.get<
+      ApiResponse<{
+        token: string;
+        printUrl: string;
+        ghnOrderCode: string;
+      }>
+    >(`/admin/orders/${orderId}/ghn-print-label`),
 };
 
 export const adminStatisticsApi = stats;

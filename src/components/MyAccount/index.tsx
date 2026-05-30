@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
-import AddressModal from "./AddressModal";
 import Orders from "../Orders";
+import AccountDetailsForm from "./AccountDetailsForm";
+import AddressBook from "./AddressBook";
 import { useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import { logout } from "@/redux/features/auth-slice";
@@ -11,7 +12,6 @@ import { useRouter } from "next/navigation";
 
 const MyAccount = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [addressModal, setAddressModal] = useState(false);
   const { user } = useAppSelector((state) => state.authReducer);
   const dispatch = useDispatch();
   const router = useRouter();
@@ -19,14 +19,6 @@ const MyAccount = () => {
   const handleLogout = () => {
     dispatch(logout());
     router.push("/signin");
-  };
-
-  const openAddressModal = () => {
-    setAddressModal(true);
-  };
-
-  const closeAddressModal = () => {
-    setAddressModal(false);
   };
 
   return (
@@ -310,12 +302,9 @@ const MyAccount = () => {
             </div>
             {/* <!-- downloads tab content end -->
 
-          <!-- addresses tab content start --> */}
-            <div
-              className={`flex-col sm:flex-row gap-7.5 ${
-                activeTab === "addresses" ? "flex" : "hidden"
-              }`}
-            >
+          <!-- addresses tab --> */}
+            {activeTab === "addresses" ? <AddressBook /> : null}
+            <div className="hidden">
               <div className="xl:max-w-[370px] w-full bg-white shadow-1 rounded-xl">
                 <div className="flex items-center justify-between py-5 px-4 sm:pl-7.5 sm:pr-6 border-b border-gray-3">
                   <p className="font-medium text-xl text-dark">
@@ -323,8 +312,8 @@ const MyAccount = () => {
                   </p>
 
                   <button
+                    type="button"
                     className="text-dark ease-out duration-200 hover:text-blue"
-                    onClick={openAddressModal}
                   >
                     <svg
                       className="fill-current"
@@ -456,7 +445,7 @@ const MyAccount = () => {
 
                   <button
                     className="text-dark ease-out duration-200 hover:text-blue"
-                    onClick={openAddressModal}
+                    onClick={() => setActiveTab("addresses")}
                   >
                     <svg
                       className="fill-current"
@@ -583,157 +572,13 @@ const MyAccount = () => {
             {/* <!-- addresses tab content end -->
 
           <!-- details tab content start --> */}
-            <div
-              className={`xl:max-w-[770px] w-full ${
-                activeTab === "account-details" ? "block" : "hidden"
-              }`}
-            >
-              <form>
-                <div className="bg-white shadow-1 rounded-xl p-4 sm:p-8.5">
-                  <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
-                    <div className="w-full">
-                      <label htmlFor="firstName" className="block mb-2.5">
-                        Tên <span className="text-red">*</span>
-                      </label>
-
-                      <input
-                        type="text"
-                        name="firstName"
-                        id="firstName"
-                        placeholder="Jhon"
-                        defaultValue="Jhon"
-                        readOnly
-                        className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                      />
-                    </div>
-
-                    <div className="w-full">
-                      <label htmlFor="lastName" className="block mb-2.5">
-                        Họ <span className="text-red">*</span>
-                      </label>
-
-                      <input
-                        type="text"
-                        name="lastName"
-                        id="lastName"
-                        placeholder="Deo"
-                        defaultValue="Deo"
-                        readOnly
-                        className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-5">
-                    <label htmlFor="countryName" className="block mb-2.5">
-                      Quốc gia/ Khu vực <span className="text-red">*</span>
-                    </label>
-
-                    <div className="relative">
-                      <select className="w-full bg-gray-1 rounded-md border border-gray-3 text-dark-4 py-3 pl-5 pr-9 duration-200 appearance-none outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20">
-                        <option value="0">Việt Nam</option>
-                        <option value="1">Mỹ</option>
-                        <option value="2">Anh</option>
-                      </select>
-
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-4">
-                        <svg
-                          className="fill-current"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M2.41469 5.03569L2.41467 5.03571L2.41749 5.03846L7.76749 10.2635L8.0015 10.492L8.23442 10.2623L13.5844 4.98735L13.5844 4.98735L13.5861 4.98569C13.6809 4.89086 13.8199 4.89087 13.9147 4.98569C14.0092 5.08024 14.0095 5.21864 13.9155 5.31345C13.9152 5.31373 13.915 5.31401 13.9147 5.31429L8.16676 10.9622L8.16676 10.9622L8.16469 10.9643C8.06838 11.0606 8.02352 11.0667 8.00039 11.0667C7.94147 11.0667 7.89042 11.0522 7.82064 10.9991L2.08526 5.36345C1.99127 5.26865 1.99154 5.13024 2.08609 5.03569C2.18092 4.94086 2.31986 4.94086 2.41469 5.03569Z"
-                            fill=""
-                            stroke=""
-                            strokeWidth="0.666667"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
-                  >
-                    Lưu Thay Đổi
-                  </button>
-                </div>
-
-                <p className="text-custom-sm mt-5 mb-9">
-                  Tên này sẽ được hiển thị trong phần tài khoản và trong các đánh giá của bạn
-                </p>
-
-                <p className="font-medium text-xl sm:text-2xl text-dark mb-7">
-                  Đổi Mật Khẩu
-                </p>
-
-                <div className="bg-white shadow-1 rounded-xl p-4 sm:p-8.5">
-                  <div className="mb-5">
-                    <label htmlFor="oldPassword" className="block mb-2.5">
-                      Mật Khẩu Cũ
-                    </label>
-
-                    <input
-                      type="password"
-                      name="oldPassword"
-                      id="oldPassword"
-                      autoComplete="on"
-                      className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                    />
-                  </div>
-
-                  <div className="mb-5">
-                    <label htmlFor="newPassword" className="block mb-2.5">
-                      Mật Khẩu Mới
-                    </label>
-
-                    <input
-                      type="password"
-                      name="newPassword"
-                      id="newPassword"
-                      autoComplete="on"
-                      className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                    />
-                  </div>
-
-                  <div className="mb-5">
-                    <label
-                      htmlFor="confirmNewPassword"
-                      className="block mb-2.5"
-                    >
-                      Xác Nhận Mật Khẩu Mới
-                    </label>
-
-                    <input
-                      type="password"
-                      name="confirmNewPassword"
-                      id="confirmNewPassword"
-                      autoComplete="on"
-                      className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
-                  >
-                    Đổi Mật Khẩu
-                  </button>
-                </div>
-              </form>
-            </div>
+            {activeTab === "account-details" ? <AccountDetailsForm /> : null}
             {/* <!-- details tab content end -->
           <!--== user dashboard content end ==--> */}
           </div>
         </div>
       </section>
 
-      <AddressModal isOpen={addressModal} closeModal={closeAddressModal} />
     </>
   );
 };

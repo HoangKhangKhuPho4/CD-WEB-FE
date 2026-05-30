@@ -152,13 +152,10 @@ export interface Address {
   id: number;
   receiverName: string;
   phone: string;
+  province?: string;
+  district?: string;
+  ward?: string;
   addressDetail: string;
-  provinceId?: number;
-  provinceName?: string;
-  districtId?: number;
-  districtName?: string;
-  wardCode?: string;
-  wardName?: string;
   label?: string;
   isDefault: boolean;
 }
@@ -166,15 +163,41 @@ export interface Address {
 export interface AddressPayload {
   receiverName: string;
   phone: string;
+  province?: string;
+  district?: string;
+  ward?: string;
   addressDetail: string;
-  provinceId?: number;
-  provinceName?: string;
-  districtId?: number;
-  districtName?: string;
-  wardCode?: string;
-  wardName?: string;
   label?: string;
   isDefault?: boolean;
+}
+
+export interface CheckoutPayload {
+  addressId?: number;
+  shippingName?: string;
+  shippingPhone?: string;
+  shippingAddress?: string;
+  shippingProvince?: string;
+  shippingDistrict?: string;
+  shippingWard?: string;
+  toDistrictId?: number;
+  toWardCode?: string;
+  paymentMethod: string;
+  couponCode?: string;
+  note?: string;
+}
+
+export interface CheckoutOrderResponse {
+  id: number;
+  orderCode: string;
+  status: string;
+  statusDisplay?: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  paymentUrl?: string | null;
+  subtotal: number;
+  shippingFee: number;
+  discountAmount: number;
+  totalAmount: number;
 }
 
 export interface QrGenerateResponse {
@@ -190,6 +213,10 @@ export interface QrStatusResponse {
   status: 'PENDING' | 'SCANNED' | 'CONFIRMED' | 'EXPIRED';
   jwtToken?: string;
   user?: User;
+  qrType?: 'QR_LOGIN' | 'QR_ORDER_CONFIRMATION';
+  orderId?: number;
+  orderCode?: string;
+  orderStatus?: string;
 }
 
 export interface OrderSummary {
@@ -285,18 +312,31 @@ export interface Cart {
 
 export interface CartItem {
   id: number;
-  productVariantId: number;
-  productName: string;
+  productVariantId?: number;
+  productName?: string;
   variantInfo?: string;
   imageUrl?: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  variant?: {
+    id: number;
+    variantName?: string;
+    imageUrl?: string;
+    product?: { id: number; name: string };
+  };
 }
 
-export interface GhnProvince { ProvinceID: number; ProvinceName: string; }
-export interface GhnDistrict { DistrictID: number; DistrictName: string; }
-export interface GhnWard { WardCode: string; WardName: string; }
+export interface GhnProvince { provinceId: number; provinceName: string; code?: string; }
+export interface GhnDistrict { districtId: number; districtName: string; provinceId?: number; }
+export interface GhnWard { wardCode: string; wardName: string; districtId?: number; }
+
+export interface GhnCheckoutShipping {
+  shippingFee: number;
+  shippingFeeFormatted?: string;
+  freeShipping?: boolean;
+  estimatedDeliveryDate?: string;
+}
 
 
 // ════════════════════════════════════════════════════════════════════
@@ -342,19 +382,19 @@ export const profileService = {
 
 export const addressService = {
   getAll: () =>
-    api.get<ApiResponse<Address[]>>('/user/addresses'),
+    api.get<ApiResponse<Address[]>>('/addresses'),
 
   create: (data: AddressPayload) =>
-    api.post<ApiResponse<Address>>('/user/addresses', data),
+    api.post<ApiResponse<Address>>('/addresses', data),
 
   update: (id: number, data: Partial<AddressPayload>) =>
-    api.put<ApiResponse<Address>>(`/user/addresses/${id}`, data),
+    api.put<ApiResponse<Address>>(`/addresses/${id}`, data),
 
   delete: (id: number) =>
-    api.delete<ApiResponse<void>>(`/user/addresses/${id}`),
+    api.delete<ApiResponse<void>>(`/addresses/${id}`),
 
   setDefault: (id: number) =>
-    api.patch<ApiResponse<Address>>(`/user/addresses/${id}/default`),
+    api.put<ApiResponse<Address>>(`/addresses/${id}/default`),
 };
 
 export const qrService = {
@@ -418,17 +458,30 @@ export const cartService = {
   getCart: () =>
     api.get<ApiResponse<Cart>>('/cart'),
 
-  addItem: (productVariantId: number, quantity: number) =>
-    api.post<ApiResponse<Cart>>('/cart/items', { productVariantId, quantity }),
+  addItem: (variantId: number, quantity: number) =>
+    api.post<ApiResponse<Cart>>('/cart', { variantId, quantity }),
 
   updateItem: (itemId: number, quantity: number) =>
-    api.put<ApiResponse<Cart>>(`/cart/items/${itemId}`, { quantity }),
+    api.put<ApiResponse<Cart>>(`/cart/${itemId}`, { quantity }),
 
   removeItem: (itemId: number) =>
-    api.delete<ApiResponse<Cart>>(`/cart/items/${itemId}`),
+    api.delete<ApiResponse<Cart>>(`/cart/${itemId}`),
 
   clearCart: () =>
     api.delete<ApiResponse<void>>('/cart'),
+};
+
+export const checkoutService = {
+  placeOrder: (data: CheckoutPayload) =>
+    api.post<ApiResponse<CheckoutOrderResponse>>('/orders', data),
+
+  previewCoupon: (code: string) =>
+    api.get<ApiResponse<{
+      couponCode: string;
+      discountAmount: number;
+      finalAmount: number;
+      message?: string;
+    }>>('/orders/preview-coupon', { params: { code } }),
 };
 
 export const shippingService = {
@@ -436,18 +489,52 @@ export const shippingService = {
     api.get<ApiResponse<GhnProvince[]>>('/ghn/provinces'),
 
   getDistricts: (provinceId: number) =>
-    api.get<ApiResponse<GhnDistrict[]>>(`/ghn/districts?provinceId=${provinceId}`),
+    api.get<ApiResponse<GhnDistrict[]>>('/ghn/districts', { params: { provinceId } }),
 
   getWards: (districtId: number) =>
-    api.get<ApiResponse<GhnWard[]>>(`/ghn/wards?districtId=${districtId}`),
+    api.get<ApiResponse<GhnWard[]>>('/ghn/wards', { params: { districtId } }),
 
-  calculateFee: (data: {
-    toDistrictId: number; toWardCode: string; weight?: number;
+  getCheckoutShipping: (data: {
+    toDistrictId: number;
+    toWardCode: string;
+    toProvinceId?: number;
+    orderSubtotal?: number;
   }) =>
-    api.post<ApiResponse<{ fee: number; estimatedDeliveryTime: string }>>('/ghn/calculate-fee', data),
+    api.post<ApiResponse<GhnCheckoutShipping>>('/ghn/checkout', data),
+};
+
+export type PaymentUrlResponse = {
+  orderCode: string;
+  paymentMethod: string;
+  paymentUrl: string;
+  transactionRef: string;
+  amount: number;
+};
+
+export type PaymentStatusResponse = {
+  orderCode: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  transactionRef?: string;
+  amount?: number;
+  paidAt?: string;
+  gatewayTransactionId?: string;
+  message?: string;
 };
 
 export const paymentService = {
-  createVnpayUrl: (orderId: number, amount: number) =>
-    api.post<ApiResponse<{ paymentUrl: string }>>('/payment/vnpay/create', { orderId, amount }),
+  createPayment: (data: {
+    orderCode: string;
+    bankCode?: string;
+    language?: string;
+  }) => api.post<ApiResponse<PaymentUrlResponse>>('/payment/create', data),
+
+  retryPayment: (data: {
+    orderCode: string;
+    bankCode?: string;
+    language?: string;
+  }) => api.post<ApiResponse<PaymentUrlResponse>>('/payment/retry', data),
+
+  getStatus: (orderCode: string) =>
+    api.get<ApiResponse<PaymentStatusResponse>>(`/payment/status/${orderCode}`),
 };

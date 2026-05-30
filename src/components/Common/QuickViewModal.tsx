@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { AppDispatch, useAppSelector } from "@/redux/store";
-import { addItemToCart } from "@/redux/features/cart-slice";
+import { addProductToCartByProductId } from "@/utils/cartSync";
 import { useDispatch } from "react-redux";
 import Image from "next/image";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
@@ -16,6 +16,7 @@ const QuickViewModal = () => {
   const [quantity, setQuantity] = useState(1);
 
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
   // get the product data
   const product = useAppSelector((state) => state.quickViewReducer.value);
@@ -29,16 +30,22 @@ const QuickViewModal = () => {
     openPreviewModal();
   };
 
-  // add to cart
-  const handleAddToCart = () => {
-    dispatch(
-      addItemToCart({
-        ...product,
-        quantity,
-      })
+  const handleAddToCart = async () => {
+    if (!product?.id) return;
+    const ok = await addProductToCartByProductId(
+      dispatch,
+      isAuthenticated,
+      product.id,
+      quantity,
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        discountedPrice: product.discountedPrice,
+        imgs: product.imgs,
+      }
     );
-
-    closeModal();
+    if (ok) closeModal();
   };
 
   useEffect(() => {

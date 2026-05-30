@@ -181,6 +181,12 @@ export default function QrLoginPage() {
               </button>
             )}
             <a
+              href="/qr-scan"
+              className="block text-sm text-blue hover:underline"
+            >
+              Đã có mã trên màn hình khác? Quét bằng điện thoại →
+            </a>
+            <a
               href="/signin"
               className="block text-sm text-gray-500 hover:text-blue"
             >

@@ -25,3 +25,9 @@ export const cancelOrderApi = async (orderId: number, reason?: string) => {
   const res = await api.put(`/orders/${orderId}/cancel`, { reason: reason || '' });
   return res.data;
 };
+
+// 4. Đặt lại — thêm sản phẩm đơn cũ vào giỏ
+export const reorderOrderApi = async (orderCode: string) => {
+  const res = await api.post(`/orders/${orderCode}/reorder`);
+  return res.data;
+};

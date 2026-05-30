@@ -16,6 +16,8 @@ interface ReturnRow {
   amount: string;
   status: "pending" | "approved" | "rejected";
   date: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
 }
 
 const statusMap = {
@@ -40,6 +42,8 @@ function mapOrder(o: AdminOrderSummary): ReturnRow {
     amount: formatVnd(o.total),
     status,
     date: formatDate(o.createdAt),
+    paymentMethod: o.paymentMethod,
+    paymentStatus: o.paymentStatus,
   };
 }
 
@@ -49,6 +53,7 @@ export default function ReturnManagement() {
   const [rows, setRows] = useState<ReturnRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<ReturnRow | null>(null);
+  const [refunding, setRefunding] = useState(false);
   const [tab, setTab] = useState<ReturnTab>("REFUNDED");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -100,6 +105,30 @@ export default function ReturnManagement() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleRefundVnpay = async () => {
+    if (!detail) return;
+    setRefunding(true);
+    try {
+      const res = await adminOrderApi.refundVnpay(detail.id);
+      const body = res.data.data;
+      if (res.data.success && body?.success) {
+        toast.success(body.message || "Hoàn tiền VNPay thành công");
+        setDetail(null);
+        await load();
+        await loadSummary();
+      } else {
+        toast.error(body?.message || res.data.message || "Hoàn tiền thất bại");
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Hoàn tiền VNPay thất bại";
+      toast.error(msg);
+    } finally {
+      setRefunding(false);
+    }
+  };
 
   const updateStatus = async (id: number, status: string) => {
     try {
@@ -233,21 +262,35 @@ export default function ReturnManagement() {
             <p>
               <span className="text-[#8D93A5]">Tổng tiền:</span> {detail.amount}
             </p>
-            <div className="flex gap-2 pt-4">
-              <button
-                type="button"
-                onClick={() => void updateStatus(detail.id, "REFUNDED")}
-                className="flex-1 py-2.5 bg-green text-white rounded-lg text-sm font-semibold"
-              >
-                Đánh dấu hoàn tiền
-              </button>
-              <button
-                type="button"
-                onClick={() => void updateStatus(detail.id, "CANCELLED")}
-                className="flex-1 py-2.5 border border-red text-red rounded-lg text-sm font-semibold"
-              >
-                Hủy đơn
-              </button>
+            <div className="flex flex-col gap-2 pt-4">
+              {detail.paymentMethod === "VNPAY" &&
+                detail.paymentStatus === "PAID" &&
+                detail.status !== "approved" && (
+                  <button
+                    type="button"
+                    disabled={refunding}
+                    onClick={() => void handleRefundVnpay()}
+                    className="w-full py-2.5 bg-[#3C50E0] text-white rounded-lg text-sm font-semibold disabled:opacity-60"
+                  >
+                    {refunding ? "Đang hoàn VNPay..." : "Hoàn tiền qua VNPay"}
+                  </button>
+                )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void updateStatus(detail.id, "REFUNDED")}
+                  className="flex-1 py-2.5 bg-green text-white rounded-lg text-sm font-semibold"
+                >
+                  Đánh dấu hoàn tiền
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void updateStatus(detail.id, "CANCELLED")}
+                  className="flex-1 py-2.5 border border-red text-red rounded-lg text-sm font-semibold"
+                >
+                  Hủy đơn
+                </button>
+              </div>
             </div>
           </div>
         )}

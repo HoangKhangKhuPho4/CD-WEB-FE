@@ -45,6 +45,7 @@ export default function OrderDetailModal({
   const [ghnOrderCode, setGhnOrderCode] = useState("");
   const [imeiInputs, setImeiInputs] = useState<Record<number, string>>({});
   const [assigningImei, setAssigningImei] = useState<number | null>(null);
+  const [printingLabel, setPrintingLabel] = useState(false);
 
   useEffect(() => {
     if (!open || orderId == null) {
@@ -79,6 +80,24 @@ export default function OrderDetailModal({
     canAssignImei(user) &&
     detail &&
     ["CONFIRMED", "PROCESSING"].includes(detail.status.toUpperCase());
+
+  const handlePrintGhnLabel = async () => {
+    if (orderId == null) return;
+    setPrintingLabel(true);
+    try {
+      const res = await adminOrderApi.ghnPrintLabel(orderId);
+      if (res.data.success && res.data.data?.printUrl) {
+        window.open(res.data.data.printUrl, "_blank", "noopener,noreferrer");
+        toast.success("Đã mở trang in nhãn vận đơn GHN");
+      } else {
+        toast.error(res.data.message || "Không lấy được link in nhãn");
+      }
+    } catch {
+      toast.error("Không lấy được link in nhãn GHN");
+    } finally {
+      setPrintingLabel(false);
+    }
+  };
 
   const handleAssignImei = async (orderDetailId: number) => {
     if (orderId == null) return;
@@ -186,9 +205,21 @@ export default function OrderDetailModal({
                 </div>
               </div>
               {(detail.trackingCode || detail.ghnOrderCode) && (
-                <div className="text-sm text-[#606882]">
+                <div className="text-sm text-[#606882] space-y-2">
                   {detail.trackingCode && <p>Mã tracking: {detail.trackingCode}</p>}
-                  {detail.ghnOrderCode && <p>Mã GHN: {detail.ghnOrderCode}</p>}
+                  {detail.ghnOrderCode && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p>Mã GHN: {detail.ghnOrderCode}</p>
+                      <button
+                        type="button"
+                        disabled={printingLabel}
+                        onClick={() => void handlePrintGhnLabel()}
+                        className="text-xs font-semibold text-[#3C50E0] hover:underline disabled:opacity-50"
+                      >
+                        {printingLabel ? "Đang tải..." : "In nhãn / PDF GHN"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

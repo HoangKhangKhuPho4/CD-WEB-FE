@@ -332,6 +332,21 @@ const Signin = () => {
                   ) : null}
                 </div>
 
+                <p className="text-center mt-4 flex flex-col gap-1">
+                  <Link
+                    href="/qr-login"
+                    className="text-blue text-sm ease-out duration-200 hover:underline"
+                  >
+                    Hiển thị mã QR (máy tính)
+                  </Link>
+                  <Link
+                    href="/qr-scan"
+                    className="text-blue text-sm ease-out duration-200 hover:underline"
+                  >
+                    Quét mã QR (điện thoại)
+                  </Link>
+                </p>
+
                 <p className="text-center mt-6">
                   Chưa có tài khoản?
                   <Link

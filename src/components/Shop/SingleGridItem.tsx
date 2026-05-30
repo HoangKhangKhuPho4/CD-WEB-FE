@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { updateQuickView } from "@/redux/features/quickView-slice";
-import { addItemToCart } from "@/redux/features/cart-slice";
+import { addProductToCartByProductId } from "@/utils/cartSync";
 import { toggleWishlist, checkIsLiked } from "@/redux/features/wishlist-slice";
 import { useDispatch } from "react-redux";
 import { AppDispatch, useAppSelector } from "@/redux/store";
@@ -30,14 +30,14 @@ const SingleGridItem = ({ item }: { item: Product }) => {
     dispatch(updateQuickView({ ...item }));
   };
 
-  // add to cart
-  const handleAddToCart = () => {
-    dispatch(
-      addItemToCart({
-        ...item,
-        quantity: 1,
-      })
-    );
+  const handleAddToCart = async () => {
+    await addProductToCartByProductId(dispatch, isAuthenticated, item.id, 1, {
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      discountedPrice: item.discountedPrice,
+      imgs: item.imgs,
+    });
   };
 
   const handleItemToWishList = async () => {

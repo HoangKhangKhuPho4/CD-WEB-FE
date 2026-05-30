@@ -7,9 +7,10 @@ import CustomSelect, { type HeaderSelectOption } from "./CustomSelect";
 import HeaderSearchField from "./HeaderSearchField";
 import { menuData } from "./menuData";
 import Dropdown from "./Dropdown";
-import { useAppSelector } from "@/redux/store";
-import { useSelector } from "react-redux";
+import { AppDispatch, useAppSelector } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
+import { formatVnd, loadCartFromApi } from "@/utils/cartSync";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import Image from "next/image";
 import { getProductCategoryRows } from "@/utils/productCategoryCache";
@@ -18,6 +19,7 @@ import { canAccessAdminPanel } from "@/utils/adminApi";
 const ALL_CATEGORIES_OPTION: HeaderSelectOption = { label: "Tất cả danh mục", value: "0" };
 
 const Header = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -61,6 +63,9 @@ const Header = () => {
   );
 
   const handleOpenCartModal = () => {
+    if (isAuthenticated) {
+      void loadCartFromApi(dispatch);
+    }
     openCartModal();
   };
 
@@ -268,7 +273,7 @@ const Header = () => {
                       Giỏ hàng
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
-                      ${totalPrice}
+                      {formatVnd(totalPrice)}
                     </p>
                   </div>
                 </button>
