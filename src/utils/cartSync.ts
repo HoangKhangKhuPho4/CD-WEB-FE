@@ -54,6 +54,55 @@ export async function loadCartFromApi(dispatch: AppDispatch): Promise<void> {
   }
 }
 
+/** Dòng giỏ khách vãng lai (chưa có variantId từ API). */
+export function isGuestCartItem(item: CartItem): boolean {
+  return item.variantId == null;
+}
+
+/** Đẩy sản phẩm giỏ khách lên API (resolve variant nếu thiếu). */
+export async function mergeGuestItemsToApi(
+  dispatch: AppDispatch,
+  guestItems: CartItem[]
+): Promise<{ merged: number; failed: number }> {
+  let merged = 0;
+  let failed = 0;
+
+  for (const item of guestItems) {
+    try {
+      let variantId = item.variantId;
+      const productId = item.productId ?? item.id;
+      if (!variantId && productId) {
+        const raw = await fetchProductDetail(productId);
+        variantId = resolveDefaultVariantId(raw?.variants) ?? undefined;
+      }
+      if (!variantId) {
+        failed += 1;
+        continue;
+      }
+      const res = await cartService.addItem(variantId, item.quantity);
+      if (res.data?.success) {
+        merged += 1;
+      } else {
+        failed += 1;
+      }
+    } catch {
+      failed += 1;
+    }
+  }
+
+  await loadCartFromApi(dispatch);
+  return { merged, failed };
+}
+
+export async function getServerCartItemCount(): Promise<number> {
+  try {
+    const res = await cartService.getCart();
+    return res.data?.data?.items?.length ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function updateCartLineQuantity(
   dispatch: AppDispatch,
   isAuthenticated: boolean,

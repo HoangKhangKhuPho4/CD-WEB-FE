@@ -634,6 +634,15 @@ export const adminOrderApi = {
         ghnOrderCode: string;
       }>
     >(`/admin/orders/${orderId}/ghn-print-label`),
+
+  bulkUpdateStatus: (orderIds: number[], status: string, note?: string) =>
+    api.patch<
+      ApiResponse<{
+        successCount: number;
+        failCount: number;
+        errors?: string[];
+      }>
+    >("/admin/orders/bulk-status", { orderIds, status, note }),
 };
 
 export const adminStatisticsApi = stats;

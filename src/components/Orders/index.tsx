@@ -6,7 +6,7 @@ import {
   getOrderDetailApi,
   reorderOrderApi,
 } from "@/utils/ordersApi";
-import { qrService, type QrGenerateResponse } from "@/utils/api";
+import { qrService, paymentService, type QrGenerateResponse } from "@/utils/api";
 import { loadCartFromApi } from "@/utils/cartSync";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
@@ -157,6 +157,7 @@ const OrderDetailModal = ({
   const [cancelling, setCancelling] = useState(false);
   const [qrData, setQrData] = useState<QrGenerateResponse | null>(null);
   const [reordering, setReordering] = useState(false);
+  const [retryingPayment, setRetryingPayment] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
@@ -223,6 +224,28 @@ const OrderDetailModal = ({
       toast.error(msg);
     } finally {
       setReordering(false);
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    if (!detail) return;
+    setRetryingPayment(true);
+    try {
+      const res = await paymentService.retryPayment({
+        orderCode: detail.orderCode,
+      });
+      if (res.data?.success && res.data.data?.paymentUrl) {
+        window.location.href = res.data.data.paymentUrl;
+        return;
+      }
+      toast.error(res.data?.message || "Không tạo được link thanh toán");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Không tạo được link thanh toán";
+      toast.error(msg);
+    } finally {
+      setRetryingPayment(false);
     }
   };
 
@@ -500,15 +523,17 @@ const OrderDetailModal = ({
               >
                 {reordering ? "Đang thêm..." : "Mua lại"}
               </button>
-              {detail.paymentUrl &&
-                detail.paymentStatus !== "PAID" &&
-                detail.status === "PENDING" && (
-                  <a
-                    href={detail.paymentUrl}
-                    className="px-6 py-2.5 rounded-md bg-green text-white font-medium hover:opacity-90"
+              {detail.paymentStatus !== "PAID" &&
+                detail.status === "PENDING" &&
+                ["VNPAY", "MOMO", "ZALOPAY"].includes(detail.paymentMethod) && (
+                  <button
+                    type="button"
+                    disabled={retryingPayment}
+                    onClick={() => void handleRetryPayment()}
+                    className="px-6 py-2.5 rounded-md bg-green text-white font-medium hover:opacity-90 disabled:opacity-50"
                   >
-                    Thanh toán online
-                  </a>
+                    {retryingPayment ? "Đang tạo link..." : "Thanh toán lại"}
+                  </button>
                 )}
               {detail.status === "PENDING" && (
                 <button

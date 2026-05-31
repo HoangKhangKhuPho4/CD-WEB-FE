@@ -48,6 +48,11 @@ type OrdersAdminContextValue = {
     note?: string,
     extra?: { trackingCode?: string; ghnOrderCode?: string }
   ) => Promise<void>;
+  bulkUpdateStatus: (
+    orderIds: number[],
+    status: string,
+    note?: string
+  ) => Promise<void>;
 };
 
 const OrdersAdminContext = createContext<OrdersAdminContextValue | null>(null);
@@ -144,6 +149,24 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
     await load();
   };
 
+  const bulkUpdateStatus = async (
+    orderIds: number[],
+    status: string,
+    note?: string
+  ) => {
+    const res = await adminOrderApi.bulkUpdateStatus(orderIds, status, note);
+    if (res.data.success) {
+      const r = res.data.data;
+      toast.success(
+        `Cập nhật ${r.successCount} đơn${r.failCount ? `, ${r.failCount} lỗi` : ""}`
+      );
+      if (r.errors?.length) {
+        console.warn("Bulk update errors:", r.errors);
+      }
+    }
+    await load();
+  };
+
   return (
     <OrdersAdminContext.Provider
       value={{
@@ -160,6 +183,7 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
         reload: load,
         fetchDetail,
         updateStatus,
+        bulkUpdateStatus,
       }}
     >
       {children}

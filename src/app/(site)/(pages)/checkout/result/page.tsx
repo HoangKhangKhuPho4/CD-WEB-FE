@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Breadcrumb from "@/components/Common/Breadcrumb";
+import { paymentService } from "@/utils/api";
+import { useAppSelector } from "@/redux/store";
 
 function parseSuccess(value: string | null): boolean | null {
   if (value === null) return null;
@@ -14,28 +16,59 @@ function parseSuccess(value: string | null): boolean | null {
 
 export default function CheckoutResultPage() {
   const searchParams = useSearchParams();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
+
   const vnpCode = searchParams.get("vnp_ResponseCode");
   const successParam = searchParams.get("success");
   const orderCode =
     searchParams.get("orderCode") ||
     searchParams.get("vnp_TxnRef") ||
     "";
-  const message = searchParams.get("message");
-  const paymentStatus = searchParams.get("paymentStatus");
+  const urlMessage = searchParams.get("message");
+  const urlPaymentStatus = searchParams.get("paymentStatus");
+
+  const [verifying, setVerifying] = useState(false);
+  const [serverStatus, setServerStatus] = useState<string | null>(null);
+  const [serverMessage, setServerMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!orderCode || !isAuthenticated) return;
+    setVerifying(true);
+    void paymentService
+      .getStatus(orderCode)
+      .then((res) => {
+        if (res.data?.success && res.data.data) {
+          setServerStatus(res.data.data.paymentStatus);
+          setServerMessage(res.data.data.message ?? null);
+        }
+      })
+      .catch(() => {
+        /* URL params vẫn dùng được */
+      })
+      .finally(() => setVerifying(false));
+  }, [orderCode, isAuthenticated]);
 
   const success = useMemo(() => {
+    if (serverStatus === "PAID") return true;
+    if (serverStatus === "FAILED" || serverStatus === "REFUNDED") return false;
     const parsed = parseSuccess(successParam);
     if (parsed !== null) return parsed;
     if (vnpCode === "00") return true;
     if (vnpCode) return false;
     return false;
-  }, [successParam, vnpCode]);
+  }, [successParam, vnpCode, serverStatus]);
+
+  const paymentStatus = serverStatus ?? urlPaymentStatus;
+  const message = serverMessage ?? urlMessage;
 
   return (
     <>
       <Breadcrumb title="Kết quả thanh toán" pages={["checkout", "kết quả"]} />
       <section className="py-20 bg-gray-2">
         <div className="site-container max-w-lg mx-auto text-center bg-white rounded-xl shadow-1 p-10">
+          {verifying && (
+            <p className="text-sm text-gray-500 mb-4">Đang xác nhận thanh toán...</p>
+          )}
           {success ? (
             <>
               <div className="w-16 h-16 rounded-full bg-green-light-6 text-green flex items-center justify-center mx-auto mb-6 text-2xl">
@@ -49,6 +82,11 @@ export default function CheckoutResultPage() {
               {orderCode && (
                 <p className="text-dark-5 mb-6">
                   Mã đơn hàng: <strong className="text-dark">{orderCode}</strong>
+                </p>
+              )}
+              {paymentStatus && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Trạng thái: <strong>{paymentStatus}</strong>
                 </p>
               )}
               <p className="text-sm text-dark-5 mb-8">
@@ -67,6 +105,11 @@ export default function CheckoutResultPage() {
               {orderCode && (
                 <p className="text-dark-5 mb-4">
                   Mã đơn hàng: <strong className="text-dark">{orderCode}</strong>
+                </p>
+              )}
+              {paymentStatus && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Trạng thái: <strong>{paymentStatus}</strong>
                 </p>
               )}
               <p className="text-sm text-dark-5 mb-8">
