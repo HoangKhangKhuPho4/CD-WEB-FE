@@ -553,7 +553,7 @@ export const adminCmsApi = {
   deletePost: (id: number) => api.delete<ApiResponse<void>>(`/admin/cms/posts/${id}`),
 };
 
-// ─── Orders (re-export from api orderService types) ─────────────────────
+// ─── Orders (adminOrderApi) ─────────────────────────────────────────────
 
 export interface AdminOrderSummary {
   id: number;

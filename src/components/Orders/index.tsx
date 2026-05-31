@@ -16,6 +16,7 @@ import { hasPermission, hasStaffRole } from "@/utils/rbac";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import GhnTrackingPanel from "./GhnTrackingPanel";
 
 // --- Types ---
 type OrderSummary = {
@@ -61,6 +62,8 @@ type OrderDetail = {
   statusDisplay: string;
   paymentUrl?: string | null;
   transactionRef?: string | null;
+  trackingCode?: string | null;
+  ghnOrderCode?: string | null;
   subtotal: number;
   discountAmount: number;
   totalAmount: number;
@@ -366,6 +369,11 @@ const OrderDetailModal = ({
                 <p className="text-sm text-gray-500">Chưa có lịch sử trạng thái.</p>
               )}
             </div>
+
+            <GhnTrackingPanel
+              trackingCode={detail.trackingCode}
+              ghnOrderCode={detail.ghnOrderCode}
+            />
 
             {/* Shipping info */}
             <div className="bg-gray-1 rounded-lg p-5 mb-6">

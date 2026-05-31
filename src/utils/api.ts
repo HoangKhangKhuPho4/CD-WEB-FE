@@ -411,35 +411,6 @@ export const qrService = {
     api.post<ApiResponse<QrStatusResponse>>('/qr/confirm', { sessionId }),
 };
 
-export const orderService = {
-  // Customer
-  getMyOrders: (params?: { status?: string; page?: number; size?: number }) =>
-    api.get<ApiResponse<PageResponse<OrderSummary>>>('/user/orders', { params }),
-
-  getMyOrderDetail: (id: number) =>
-    api.get<ApiResponse<OrderDetail>>(`/user/orders/${id}`),
-
-  cancelOrder: (id: number, reason?: string) =>
-    api.patch<ApiResponse<OrderDetail>>(`/user/orders/${id}/cancel`, null, {
-      params: { reason },
-    }),
-
-  // Admin
-  adminGetOrders: (params?: {
-    keyword?: string; status?: string; page?: number; size?: number; sortBy?: string; sortDir?: string;
-  }) =>
-    api.get<ApiResponse<PageResponse<OrderSummary>>>('/admin/orders', { params }),
-
-  adminGetOrderDetail: (id: number) =>
-    api.get<ApiResponse<OrderDetail>>(`/admin/orders/${id}`),
-
-  adminUpdateStatus: (id: number, status: string, note?: string) =>
-    api.patch<ApiResponse<OrderDetail>>(`/admin/orders/${id}/status`, { status, note }),
-
-  adminBulkUpdateStatus: (orderIds: number[], status: string, note?: string) =>
-    api.patch<ApiResponse<BulkUpdateResult>>('/admin/orders/bulk-status', { orderIds, status, note }),
-};
-
 export const productService = {
   getAll: (params?: {
     page?: number; size?: number; keyword?: string; categoryId?: number;

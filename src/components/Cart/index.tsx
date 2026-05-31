@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Discount from "./Discount";
 import OrderSummary from "./OrderSummary";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
@@ -96,8 +95,14 @@ const Cart = () => {
               </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11 mt-9">
-              <Discount />
+            <div className="mt-9 max-w-[670px] ml-auto">
+              <div className="mb-4 rounded-[10px] bg-white shadow-1 px-5 py-4 text-sm text-gray-600">
+                Mã giảm giá áp dụng tại bước{" "}
+                <Link href="/checkout" className="text-blue hover:underline">
+                  thanh toán
+                </Link>
+                .
+              </div>
               <OrderSummary />
             </div>
           </div>
@@ -106,7 +111,7 @@ const Cart = () => {
         <div className="text-center mt-8 pb-20">
           <p className="text-dark text-lg mb-6">Giỏ hàng trống</p>
           <Link
-            href="/shop"
+            href="/shop-with-sidebar"
             className="inline-flex font-medium text-white bg-blue py-3 px-8 rounded-md hover:bg-blue-dark"
           >
             Tiếp tục mua sắm
