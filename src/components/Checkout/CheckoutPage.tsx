@@ -132,18 +132,68 @@ const CheckoutPage = () => {
   );
 
   useEffect(() => {
-    if (selectedAddressId && addresses.length) {
-      const addr = addresses.find((a) => a.id === selectedAddressId);
-      if (addr) {
-        setShippingName(addr.receiverName);
-        setShippingPhone(addr.phone);
-        setShippingAddress(addr.addressDetail);
-        setProvinceName(addr.province || "");
-        setDistrictName(addr.district || "");
-        setWardName(addr.ward || "");
+    const syncAddressDropdowns = async () => {
+      if (!selectedAddressId) {
+        setShippingName("");
+        setShippingPhone("");
+        setShippingAddress("");
+        setProvinceName("");
+        setDistrictName("");
+        setWardName("");
+        setProvinceId("");
+        setDistrictId("");
+        setWardCode("");
+        setDistricts([]);
+        setWards([]);
+        setShippingFee(0);
+        return;
       }
-    }
-  }, [selectedAddressId, addresses]);
+
+      if (selectedAddressId && addresses.length && provinces.length) {
+        const addr = addresses.find((a) => a.id === selectedAddressId);
+        if (addr) {
+          setShippingName(addr.receiverName);
+          setShippingPhone(addr.phone);
+          setShippingAddress(addr.addressDetail);
+          setProvinceName(addr.province || "");
+          setDistrictName(addr.district || "");
+          setWardName(addr.ward || "");
+          if (addr.province) {
+            const p = provinces.find((x) => x.provinceName === addr.province);
+            if (p) {
+              setProvinceId(p.provinceId);
+              
+              try {
+                const resD = await shippingService.getDistricts(p.provinceId);
+                const dData = resD.data?.data || resD.data;
+                const districtList: GhnDistrict[] = Array.isArray(dData) ? dData : [];
+                setDistricts(districtList);
+
+                const d = districtList.find((x: GhnDistrict) => x.districtName === addr.district);
+                if (d) {
+                  setDistrictId(d.districtId);
+
+                  const resW = await shippingService.getWards(d.districtId);
+                  const wData = resW.data?.data || resW.data;
+                  const wardList: GhnWard[] = Array.isArray(wData) ? wData : [];
+                  setWards(wardList);
+
+                  const w = wardList.find((x: GhnWard) => x.wardName === addr.ward);
+                  if (w) {
+                    setWardCode(w.wardCode);
+                  }
+                }
+              } catch (err) {
+                console.error("Lỗi tự động map địa chỉ GHN:", err);
+              }
+            }
+          }
+        }
+      }
+    };
+
+    syncAddressDropdowns();
+  }, [selectedAddressId, addresses, provinces]); 
 
   useEffect(() => {
     if (districtId && wardCode) {

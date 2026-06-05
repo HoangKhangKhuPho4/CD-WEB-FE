@@ -183,6 +183,13 @@ export default function QrScanPage() {
                   id="qr-reader"
                   className="w-full overflow-hidden rounded-lg border border-gray-3 min-h-[280px] bg-black/5"
                 />
+                
+                {/* DEBUG HOOKS FOR AUTOMATED TESTING */}
+                <div className="mt-4 p-4 bg-gray-100 rounded">
+                  <p className="text-xs text-gray-500 mb-2">Debug Simulator:</p>
+                  <input id="debug-scan-input" type="text" className="w-full p-2 border mb-2 text-xs" placeholder="Paste cdweb://qr?token=..." />
+                  <button id="debug-scan-btn" type="button" onClick={() => handleScanSuccess((document.getElementById('debug-scan-input') as HTMLInputElement).value)} className="w-full bg-gray-800 text-white p-2 rounded text-sm">Simulate Scan</button>
+                </div>
 
                 {step === "scanned" && sessionId && (
                   <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

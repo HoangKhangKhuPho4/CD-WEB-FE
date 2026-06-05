@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -118,6 +118,8 @@ export default function QrLoginPage() {
                   level="M"
                   className={status === "EXPIRED" ? "opacity-30" : ""}
                 />
+                {/* DEBUG HOOK FOR AUTOMATED TESTING */}
+                <div id="debug-qr-token" style={{ display: 'none' }}>{qrData?.qrContent}</div>
               )}
             </div>
 

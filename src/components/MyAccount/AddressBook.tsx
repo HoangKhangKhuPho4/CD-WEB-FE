@@ -59,9 +59,15 @@ const AddressBook = () => {
     shippingService
       .getProvinces()
       .then((res) => {
-        if (res.data.success) setProvinces(res.data.data || []);
+
+        console.log("=== KẾT QUẢ API TRẢ VỀ ===", res);
+
+        const provinceList = res.data.data || res.data; 
+
+        
+        if (Array.isArray(provinceList)) setProvinces(provinceList);
       })
-      .catch(() => {});
+      .catch((err) => console.error("Lỗi tải tỉnh thành:", err));
   }, [loadAddresses]);
 
   const openCreate = () => {
@@ -72,7 +78,7 @@ const AddressBook = () => {
     setModalOpen(true);
   };
 
-  const openEdit = (addr: Address) => {
+  const openEdit = async (addr: Address) => {
     setEditingId(addr.id);
     setForm({
       receiverName: addr.receiverName,
@@ -83,12 +89,48 @@ const AddressBook = () => {
       addressDetail: addr.addressDetail,
       label: addr.label || "Nhà",
       isDefault: addr.isDefault,
+      provinceId: undefined,
+      districtId: undefined,
+      wardCode: undefined,
     });
     setModalOpen(true);
+
+    if (addr.province) {
+      const p = provinces.find((x) => x.provinceName === addr.province);
+      if (p) {
+        setForm((f) => ({ ...f, provinceId: p.provinceId }));
+
+        try {
+          const resD = await shippingService.getDistricts(p.provinceId);
+          const districtList = resD.data?.data || resD.data || [];
+          if (Array.isArray(districtList)) {
+            setDistricts(districtList);
+            
+            const d = districtList.find((x: GhnDistrict) => x.districtName === addr.district);
+            if (d) {
+              setForm((f) => ({ ...f, districtId: d.districtId }));
+
+              const resW = await shippingService.getWards(d.districtId);
+              const wardList = resW.data?.data || resW.data || [];
+              if (Array.isArray(wardList)) {
+                setWards(wardList);
+              
+                const w = wardList.find((x: GhnWard) => x.wardName === addr.ward);
+                if (w) {
+                  setForm((f) => ({ ...f, wardCode: w.wardCode }));
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Lỗi khi tải lại dữ liệu Dropdown:", err);
+        }
+      }
+    }
   };
 
   const onProvinceChange = async (provinceId: number) => {
-    const p = provinces.find((x) => x.provinceId === provinceId);
+    const p = provinces.find((x) => x.provinceId == provinceId);
     setForm((f) => ({
       ...f,
       provinceId,
@@ -102,12 +144,13 @@ const AddressBook = () => {
     setWards([]);
     if (provinceId) {
       const res = await shippingService.getDistricts(provinceId);
-      if (res.data.success) setDistricts(res.data.data || []);
+      const districtList = res.data.data || res.data;
+      if (Array.isArray(districtList)) setDistricts(districtList);
     }
   };
 
   const onDistrictChange = async (districtId: number) => {
-    const d = districts.find((x) => x.districtId === districtId);
+    const d = districts.find((x) => x.districtId == districtId);
     setForm((f) => ({
       ...f,
       districtId,
@@ -118,12 +161,13 @@ const AddressBook = () => {
     setWards([]);
     if (districtId) {
       const res = await shippingService.getWards(districtId);
-      if (res.data.success) setWards(res.data.data || []);
+      const wardList = res.data.data || res.data;
+      if (Array.isArray(wardList)) setWards(wardList);
     }
   };
 
   const onWardChange = (wardCode: string) => {
-    const w = wards.find((x) => x.wardCode === wardCode);
+    const w = wards.find((x) => x.wardCode == wardCode);
     setForm((f) => ({ ...f, wardCode, ward: w?.wardName || "" }));
   };
 
