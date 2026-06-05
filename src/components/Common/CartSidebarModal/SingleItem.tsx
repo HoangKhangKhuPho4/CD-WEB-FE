@@ -1,34 +1,63 @@
-import React from "react";
+"use client";
+import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { AppDispatch, useAppSelector } from "@/redux/store";
 import Image from "next/image";
+import Link from "next/link";
+import { removeItemFromCart, type CartItem } from "@/redux/features/cart-slice";
+import { formatVnd, removeCartLine } from "@/utils/cartSync";
 
-const SingleItem = ({ item, removeItemFromCart }) => {
+const SingleItem = ({ item }: { item: CartItem }) => {
+  const [updating, setUpdating] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
-  const handleRemoveFromCart = () => {
-    dispatch(removeItemFromCart(item.id));
+  const handleRemoveFromCart = async () => {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      if (isAuthenticated) {
+        await removeCartLine(dispatch, true, item.id);
+      } else {
+        dispatch(removeItemFromCart(item.id));
+      }
+    } finally {
+      setUpdating(false);
+    }
   };
+
+  const thumb =
+    item.imgs?.thumbnails?.[0] || "/images/products/product-1-bg-1.png";
+  const productLink = item.productId
+    ? `/shop-details/${item.productId}`
+    : "/shop-with-sidebar";
 
   return (
     <div className="flex items-center justify-between gap-5">
       <div className="w-full flex items-center gap-6">
         <div className="flex items-center justify-center rounded-[10px] bg-gray-3 max-w-[90px] w-full h-22.5">
-          <Image src={item.imgs?.thumbnails[0]} alt="product" width={100} height={100} />
+          <Image src={thumb} alt="product" width={100} height={100} />
         </div>
 
         <div>
           <h3 className="font-medium text-dark mb-1 ease-out duration-200 hover:text-blue">
-            <a href="#"> {item.title} </a>
+            <Link href={productLink}>{item.title}</Link>
           </h3>
-          <p className="text-custom-sm">Price: ${item.discountedPrice}</p>
+          <p className="text-custom-sm">
+            {formatVnd(item.discountedPrice)}
+            {item.quantity > 1 && (
+              <span className="text-gray-500"> × {item.quantity}</span>
+            )}
+          </p>
         </div>
       </div>
 
       <button
-        onClick={handleRemoveFromCart}
-        aria-label="button for remove product from cart"
-        className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
+        type="button"
+        disabled={updating}
+        onClick={() => void handleRemoveFromCart()}
+        aria-label="Xóa khỏi giỏ"
+        className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red disabled:opacity-40"
       >
         <svg
           className="fill-current"

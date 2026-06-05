@@ -15,6 +15,7 @@ import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import ScrollToTop from "@/components/Common/ScrollToTop";
 import PreLoader from "@/components/Common/PreLoader";
 import WishlistBootstrap from "@/components/Common/WishlistBootstrap";
+import CartSyncBootstrap from "@/components/Common/CartSyncBootstrap";
 import AuthUserSync from "@/components/Auth/AuthUserSync";
 import { Toaster } from "react-hot-toast";
 
@@ -40,6 +41,7 @@ export default function SiteLayout({
               <ModalProvider>
                 <PreviewSliderProvider>
                   <WishlistBootstrap />
+                  <CartSyncBootstrap />
                   <AuthUserSync />
                   <Header />
                   {children}

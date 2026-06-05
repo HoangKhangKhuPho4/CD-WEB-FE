@@ -1,35 +1,68 @@
-import React, { useState } from "react";
-import { AppDispatch } from "@/redux/store";
+import React, { useEffect, useState } from "react";
+import { AppDispatch, useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import {
   removeItemFromCart,
   updateCartItemQuantity,
 } from "@/redux/features/cart-slice";
+import {
+  formatVnd,
+  removeCartLine,
+  updateCartLineQuantity,
+} from "@/utils/cartSync";
+import type { CartItem } from "@/redux/features/cart-slice";
 
 import Image from "next/image";
 
-const SingleItem = ({ item }) => {
+const SingleItem = ({ item }: { item: CartItem }) => {
   const [quantity, setQuantity] = useState(item.quantity);
+  const [updating, setUpdating] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
-  const handleRemoveFromCart = () => {
-    dispatch(removeItemFromCart(item.id));
-  };
+  useEffect(() => {
+    setQuantity(item.quantity);
+  }, [item.quantity]);
 
-  const handleIncreaseQuantity = () => {
-    setQuantity(quantity + 1);
-    dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity + 1 }));
-  };
-
-  const handleDecreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-      dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity - 1 }));
-    } else {
-      return;
+  const handleRemoveFromCart = async () => {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      if (isAuthenticated) {
+        const ok = await removeCartLine(dispatch, true, item.id);
+        if (!ok) return;
+      } else {
+        dispatch(removeItemFromCart(item.id));
+      }
+    } finally {
+      setUpdating(false);
     }
   };
+
+  const changeQuantity = async (next: number) => {
+    if (next < 1 || updating) return;
+    setUpdating(true);
+    const prev = quantity;
+    setQuantity(next);
+    try {
+      if (isAuthenticated) {
+        const ok = await updateCartLineQuantity(
+          dispatch,
+          true,
+          item.id,
+          next
+        );
+        if (!ok) setQuantity(prev);
+      } else {
+        dispatch(updateCartItemQuantity({ id: item.id, quantity: next }));
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const thumb = item.imgs?.thumbnails?.[0] || "/images/products/product-1-bg-1.png";
 
   return (
     <div className="flex items-center border-t border-gray-3 py-5 px-7.5">
@@ -37,12 +70,12 @@ const SingleItem = ({ item }) => {
         <div className="flex items-center justify-between gap-5">
           <div className="w-full flex items-center gap-5.5">
             <div className="flex items-center justify-center rounded-[5px] bg-gray-2 max-w-[80px] w-full h-17.5">
-              <Image width={200} height={200} src={item.imgs?.thumbnails[0]} alt="product" />
+              <Image width={80} height={80} src={thumb} alt="product" />
             </div>
 
             <div>
               <h3 className="text-dark ease-out duration-200 hover:text-blue">
-                <a href="#"> {item.title} </a>
+                {item.title}
               </h3>
             </div>
           </div>
@@ -50,15 +83,17 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[180px]">
-        <p className="text-dark">${item.discountedPrice}</p>
+        <p className="text-dark">{formatVnd(item.discountedPrice)}</p>
       </div>
 
       <div className="min-w-[275px]">
         <div className="w-max flex items-center rounded-md border border-gray-3">
           <button
-            onClick={() => handleDecreaseQuantity()}
-            aria-label="button for remove product"
-            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue"
+            type="button"
+            disabled={updating || quantity <= 1}
+            onClick={() => changeQuantity(quantity - 1)}
+            aria-label="Giảm số lượng"
+            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue disabled:opacity-40"
           >
             <svg
               className="fill-current"
@@ -80,9 +115,11 @@ const SingleItem = ({ item }) => {
           </span>
 
           <button
-            onClick={() => handleIncreaseQuantity()}
-            aria-label="button for add product"
-            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue"
+            type="button"
+            disabled={updating}
+            onClick={() => changeQuantity(quantity + 1)}
+            aria-label="Tăng số lượng"
+            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue disabled:opacity-40"
           >
             <svg
               className="fill-current"
@@ -106,14 +143,16 @@ const SingleItem = ({ item }) => {
       </div>
 
       <div className="min-w-[200px]">
-        <p className="text-dark">${item.discountedPrice * quantity}</p>
+        <p className="text-dark">{formatVnd(item.discountedPrice * quantity)}</p>
       </div>
 
       <div className="min-w-[50px] flex justify-end">
         <button
+          type="button"
+          disabled={updating}
           onClick={() => handleRemoveFromCart()}
-          aria-label="button for remove product from cart"
-          className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
+          aria-label="Xóa khỏi giỏ"
+          className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red disabled:opacity-40"
         >
           <svg
             className="fill-current"

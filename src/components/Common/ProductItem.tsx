@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { updateQuickView } from "@/redux/features/quickView-slice";
-import { addItemToCart } from "@/redux/features/cart-slice";
+import { addProductToCartByProductId } from "@/utils/cartSync";
 import { toggleWishlist, checkIsLiked } from "@/redux/features/wishlist-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { useDispatch } from "react-redux";
@@ -30,13 +30,14 @@ const ProductItem = ({ item }: { item: Product }) => {
     dispatch(updateQuickView({ ...item }));
   };
 
-  const handleAddToCart = () => {
-    dispatch(
-      addItemToCart({
-        ...item,
-        quantity: 1,
-      })
-    );
+  const handleAddToCart = async () => {
+    await addProductToCartByProductId(dispatch, isAuthenticated, item.id, 1, {
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      discountedPrice: item.discountedPrice,
+      imgs: item.imgs,
+    });
   };
 
   const handleItemToWishList = async () => {

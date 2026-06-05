@@ -1,16 +1,40 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import data from "./categoryData";
 import Image from "next/image";
 
-// Import Swiper styles
 import "swiper/css/navigation";
 import "swiper/css";
 import SingleItem from "./SingleItem";
+import { fetchCategories } from "@/utils/productApi";
+import type { Category } from "@/types/category";
 
 const Categories = () => {
   const sliderRef = useRef(null);
+  const [items, setItems] = useState<Category[]>(data);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const rows = await fetchCategories();
+        if (rows.length > 0) {
+          setItems(
+            rows.slice(0, 12).map((c, idx) => ({
+              id: c.id,
+              title: c.name,
+              img: data[idx % data.length]?.img ?? "/images/categories/categories-01.png",
+            }))
+          );
+        }
+      } catch {
+        /* giữ mock fallback */
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
@@ -22,17 +46,14 @@ const Categories = () => {
     sliderRef.current.swiper.slideNext();
   }, []);
 
-  useEffect(() => {
-    if (sliderRef.current) {
-      sliderRef.current.swiper.init();
-    }
-  }, []);
+  if (loading && items.length === 0) {
+    return null;
+  }
 
   return (
     <section className="overflow-hidden pt-17.5">
       <div className="site-container pb-15 border-b border-gray-3">
         <div className="swiper categories-carousel common-carousel">
-          {/* <!-- section title --> */}
           <div className="mb-10 flex items-center justify-between">
             <div>
               <span className="flex items-center gap-2.5 font-medium text-dark mb-1.5">
@@ -78,15 +99,8 @@ const Categories = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button onClick={handlePrev} className="swiper-button-prev">
-                <svg
-                  className="fill-current"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+              <button type="button" onClick={handlePrev} className="swiper-button-prev">
+                <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -95,16 +109,8 @@ const Categories = () => {
                   />
                 </svg>
               </button>
-
-              <button onClick={handleNext} className="swiper-button-next">
-                <svg
-                  className="fill-current"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+              <button type="button" onClick={handleNext} className="swiper-button-next">
+                <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -120,30 +126,15 @@ const Categories = () => {
             ref={sliderRef}
             slidesPerView={6}
             breakpoints={{
-              0: {
-                slidesPerView: 2,
-                spaceBetween: 12,
-              },
-              640: {
-                slidesPerView: 3,
-                spaceBetween: 16,
-              },
-              1024: {
-                slidesPerView: 5,
-                spaceBetween: 20,
-              },
-              1280: {
-                slidesPerView: 6,
-                spaceBetween: 24,
-              },
-              1536: {
-                slidesPerView: 8,
-                spaceBetween: 28,
-              },
+              0: { slidesPerView: 2, spaceBetween: 12 },
+              640: { slidesPerView: 3, spaceBetween: 16 },
+              1024: { slidesPerView: 5, spaceBetween: 20 },
+              1280: { slidesPerView: 6, spaceBetween: 24 },
+              1536: { slidesPerView: 8, spaceBetween: 28 },
             }}
           >
-            {data.map((item, key) => (
-              <SwiperSlide key={key}>
+            {items.map((item) => (
+              <SwiperSlide key={item.id}>
                 <SingleItem item={item} />
               </SwiperSlide>
             ))}

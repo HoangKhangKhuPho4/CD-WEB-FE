@@ -553,7 +553,7 @@ export const adminCmsApi = {
   deletePost: (id: number) => api.delete<ApiResponse<void>>(`/admin/cms/posts/${id}`),
 };
 
-// ─── Orders (re-export from api orderService types) ─────────────────────
+// ─── Orders (adminOrderApi) ─────────────────────────────────────────────
 
 export interface AdminOrderSummary {
   id: number;
@@ -616,6 +616,33 @@ export const adminOrderApi = {
       orderDetailId,
       imeis,
     }),
+
+  refundVnpay: (orderId: number) =>
+    api.post<
+      ApiResponse<{
+        success: boolean;
+        orderCode?: string;
+        message?: string;
+      }>
+    >(`/admin/orders/${orderId}/refund-vnpay`),
+
+  ghnPrintLabel: (orderId: number) =>
+    api.get<
+      ApiResponse<{
+        token: string;
+        printUrl: string;
+        ghnOrderCode: string;
+      }>
+    >(`/admin/orders/${orderId}/ghn-print-label`),
+
+  bulkUpdateStatus: (orderIds: number[], status: string, note?: string) =>
+    api.patch<
+      ApiResponse<{
+        successCount: number;
+        failCount: number;
+        errors?: string[];
+      }>
+    >("/admin/orders/bulk-status", { orderIds, status, note }),
 };
 
 export const adminStatisticsApi = stats;

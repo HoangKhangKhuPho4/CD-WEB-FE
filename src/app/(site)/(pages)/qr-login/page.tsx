@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -112,12 +112,17 @@ export default function QrLoginPage() {
                   <div className="w-10 h-10 border-4 border-blue border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
+                <>
                 <QRCode
                   value={qrData?.qrContent || "loading"}
                   size={192}
                   level="M"
                   className={status === "EXPIRED" ? "opacity-30" : ""}
                 />
+              
+                <div id="debug-qr-token" style={{ display: 'none' }}>
+                  {qrData?.qrContent}</div>
+                  </>
               )}
             </div>
 
@@ -180,6 +185,12 @@ export default function QrLoginPage() {
                 Tạo mã QR mới
               </button>
             )}
+            <a
+              href="/qr-scan"
+              className="block text-sm text-blue hover:underline"
+            >
+              Đã có mã trên màn hình khác? Quét bằng điện thoại →
+            </a>
             <a
               href="/signin"
               className="block text-sm text-gray-500 hover:text-blue"

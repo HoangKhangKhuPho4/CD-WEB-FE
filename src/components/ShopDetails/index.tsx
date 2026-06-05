@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import RecentlyViewdItems from "./RecentlyViewd";
@@ -11,9 +11,18 @@ import { toggleWishlist, checkIsLiked } from "@/redux/features/wishlist-slice";
 import { updateproductDetails } from "@/redux/features/product-details";
 import { fetchProductDetail } from "@/utils/productApi";
 import { mapBackendProductToFrontend } from "@/utils/productMapper";
+import type { ProductResponse } from "@/types/product-api";
+import {
+  addProductToCart,
+  formatVnd,
+  resolveDefaultVariantId,
+} from "@/utils/cartSync";
 import toast from "react-hot-toast";
 
+import ProductReviewsTab from "./ProductReviewsTab";
+
 const ShopDetails = () => {
+  const router = useRouter();
   const params = useParams();
   const routeIdRaw = params?.id;
   const routeProductId =
@@ -26,58 +35,19 @@ const ShopDetails = () => {
     Number.isFinite(routeProductId) && routeProductId > 0;
 
   const [apiLoading, setApiLoading] = useState(false);
-  const [activeColor, setActiveColor] = useState("blue");
+  const [apiProduct, setApiProduct] = useState<ProductResponse | null>(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    null
+  );
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
-
-  const [storage, setStorage] = useState("gb128");
-  const [type, setType] = useState("active");
-  const [sim, setSim] = useState("dual");
   const [quantity, setQuantity] = useState(1);
 
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
   const [activeTab, setActiveTab] = useState("tabOne");
-
-  const storages = [
-    {
-      id: "gb128",
-      title: "128 GB",
-    },
-    {
-      id: "gb256",
-      title: "256 GB",
-    },
-    {
-      id: "gb512",
-      title: "521 GB",
-    },
-  ];
-
-  const types = [
-    {
-      id: "active",
-      title: "Active",
-    },
-
-    {
-      id: "inactive",
-      title: "Inactive",
-    },
-  ];
-
-  const sims = [
-    {
-      id: "dual",
-      title: "Dual",
-    },
-
-    {
-      id: "e-sim",
-      title: "E Sim",
-    },
-  ];
 
   const tabs = [
     {
@@ -93,8 +63,6 @@ const ShopDetails = () => {
       title: "Reviews",
     },
   ];
-
-  const colors = ["red", "blue", "orange", "pink", "purple"];
 
   const productFromRedux = useAppSelector(
     (state) => state.productDetailsReducer.value
@@ -149,6 +117,8 @@ const ShopDetails = () => {
           );
           return;
         }
+        setApiProduct(raw);
+        setSelectedVariantId(resolveDefaultVariantId(raw.variants));
         dispatch(updateproductDetails(mapBackendProductToFrontend(raw)));
       } catch (e) {
         console.error(e);
@@ -165,6 +135,81 @@ const ShopDetails = () => {
   useEffect(() => {
     setPreviewImg(0);
   }, [product?.id]);
+
+  const selectedVariant = apiProduct?.variants?.find(
+    (v) => v.id === selectedVariantId
+  );
+
+  const getVariantId = (): number | null => {
+    if (selectedVariantId) return selectedVariantId;
+    if (apiProduct?.variants?.length) {
+      return resolveDefaultVariantId(apiProduct.variants);
+    }
+    return null;
+  };
+
+  const buildCartProduct = () => {
+    const price =
+      selectedVariant?.price ??
+      apiProduct?.price ??
+      product.discountedPrice;
+    const title = selectedVariant?.variantName
+      ? `${product.title} – ${selectedVariant.variantName}`
+      : product.title;
+    return {
+      id: product.id,
+      title,
+      price,
+      discountedPrice: price,
+      imgs: product.imgs,
+    };
+  };
+
+  const handleAddToCart = async () => {
+    const variantId = getVariantId();
+    if (!variantId) {
+      toast.error("Sản phẩm chưa có biến thể — không thể thêm vào giỏ");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      await addProductToCart(
+        dispatch,
+        isAuthenticated,
+        variantId,
+        quantity,
+        buildCartProduct()
+      );
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const handlePurchaseNow = async () => {
+    const variantId = getVariantId();
+    if (!variantId) {
+      toast.error("Sản phẩm chưa có biến thể");
+      return;
+    }
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để mua hàng");
+      router.push("/signin?redirect=/checkout");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      const ok = await addProductToCart(
+        dispatch,
+        isAuthenticated,
+        variantId,
+        quantity,
+        buildCartProduct()
+      );
+      if (ok) router.push("/checkout");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   const handleToggleWishlist = async () => {
     if (!isAuthenticated) {
@@ -482,148 +527,57 @@ const ShopDetails = () => {
 
                   <form onSubmit={(e) => e.preventDefault()}>
                     <div className="flex flex-col gap-6 border-y border-gray-3 mt-7.5 mb-9 py-9">
-                      {/* <!-- details item: Color --> */}
-                      <div className="flex flex-col gap-3">
-                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Màu sắc:</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {colors.map((color, key) => {
-                            const isSelected = activeColor === color;
-                            // Giả lập trạng thái hết hàng cho màu "purple"
-                            const disabled = color === "purple";
-                            
-                            return (
-                              <div
-                                key={key}
-                                onClick={() => { if (!disabled) setActiveColor(color); }}
-                                className={`
-                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
-                                  ${disabled 
-                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
-                                    : isSelected 
-                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
-                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
+                      {apiProduct?.variants && apiProduct.variants.length > 0 ? (
+                        <div className="flex flex-col gap-3">
+                          <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">
+                            Phân loại:
+                          </h4>
+                          <div className="flex flex-wrap gap-3">
+                            {apiProduct.variants.map((v) => {
+                              const isSelected = selectedVariantId === v.id;
+                              const disabled =
+                                v.isActive === false ||
+                                (v.stockQuantity ?? 0) <= 0;
+                              return (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() =>
+                                    !disabled && setSelectedVariantId(v.id)
                                   }
-                                `}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="block w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: color }}></span>
-                                  <span className={`text-sm font-bold capitalize ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
-                                    {color}
+                                  className={`
+                                    px-5 py-2 rounded-lg flex flex-col items-start relative overflow-hidden transition-all duration-200 select-none text-left
+                                    ${
+                                      disabled
+                                        ? "cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]"
+                                        : isSelected
+                                          ? "cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]"
+                                          : "cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a]"
+                                    }
+                                  `}
+                                >
+                                  <span
+                                    className={`text-sm font-bold ${disabled ? "text-[#9e9e9e]" : isSelected ? "text-[#e65100]" : "text-[#424242]"}`}
+                                  >
+                                    {v.variantName || `Biến thể #${v.id}`}
                                   </span>
-                                </div>
-                                
-                                {/* Dấu gạch ngang và chữ Hết hàng */}
-                                {disabled && (
-                                  <>
-                                    <span className="ml-2 text-[10px] font-bold text-[#e53935]">Hết hàng</span>
-                                    <div className="absolute top-1/2 left-0 w-full h-[1px] bg-[#9e9e9e] -rotate-[15deg]"></div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
+                                  <span className="text-xs text-gray-500 mt-0.5">
+                                    {formatVnd(v.price ?? 0)}
+                                    {disabled
+                                      ? " · Hết hàng"
+                                      : ` · Còn ${v.stockQuantity}`}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-
-                      {/* <!-- details item: Storage --> */}
-                      <div className="flex flex-col gap-3">
-                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Dung lượng bộ nhớ:</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {storages.map((item, key) => {
-                            const isSelected = storage === item.id;
-                            // Giả lập trạng thái hết hàng
-                            const disabled = item.id === "gb512";
-                            
-                            return (
-                              <div
-                                key={key}
-                                onClick={() => { if (!disabled) setStorage(item.id); }}
-                                className={`
-                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
-                                  ${disabled 
-                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
-                                    : isSelected 
-                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
-                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
-                                  }
-                                `}
-                              >
-                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
-                                  {item.title}
-                                </span>
-                                {disabled && (
-                                  <>
-                                    <span className="ml-2 text-[10px] font-bold text-[#e53935]">Hết hàng</span>
-                                    <div className="absolute top-1/2 left-0 w-full h-[1px] bg-[#9e9e9e] -rotate-[15deg]"></div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* <!-- details item: Type --> */}
-                      <div className="flex flex-col gap-3">
-                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Loại sản phẩm:</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {types.map((item, key) => {
-                            const isSelected = type === item.id;
-                            const disabled = false;
-                            
-                            return (
-                              <div
-                                key={key}
-                                onClick={() => setType(item.id)}
-                                className={`
-                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
-                                  ${disabled 
-                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
-                                    : isSelected 
-                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
-                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
-                                  }
-                                `}
-                              >
-                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
-                                  {item.title}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* <!-- details item: Sim --> */}
-                      <div className="flex flex-col gap-3">
-                        <h4 className="font-semibold text-dark text-sm uppercase tracking-wide">Sim:</h4>
-                        <div className="flex flex-wrap gap-3">
-                          {sims.map((item, key) => {
-                            const isSelected = sim === item.id;
-                            const disabled = false;
-                            
-                            return (
-                              <div
-                                key={key}
-                                onClick={() => setSim(item.id)}
-                                className={`
-                                  px-5 py-2 rounded-lg flex items-center relative overflow-hidden transition-all duration-200 select-none
-                                  ${disabled 
-                                    ? 'cursor-not-allowed opacity-60 bg-[#f5f5f5] border border-dashed border-[#bdbdbd]' 
-                                    : isSelected 
-                                      ? 'cursor-pointer border-2 border-[#ff9f1a] bg-gradient-to-br from-[#fff3e0] to-[#fff8f0] shadow-[0_4px_12px_rgba(255,159,26,0.15)] -translate-y-[2px]' 
-                                      : 'cursor-pointer border border-[#e0e0e0] bg-white hover:border-[#ff9f1a] hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(255,159,26,0.15)]'
-                                  }
-                                `}
-                              >
-                                <span className={`text-sm font-bold ${disabled ? 'text-[#9e9e9e]' : isSelected ? 'text-[#e65100]' : 'text-[#424242]'}`}>
-                                  {item.title}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          Sản phẩm chưa có biến thể trên hệ thống.
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4.5">
@@ -679,12 +633,23 @@ const ShopDetails = () => {
                         </button>
                       </div>
 
-                      <a
-                        href="#"
-                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
+                      <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        disabled={addingToCart || !product?.id}
+                        className="inline-flex font-medium text-dark border border-gray-3 py-3 px-6 rounded-md ease-out duration-200 hover:border-blue hover:text-blue disabled:opacity-60"
                       >
-                        Purchase Now
-                      </a>
+                        {addingToCart ? "Đang thêm..." : "Thêm vào giỏ"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handlePurchaseNow}
+                        disabled={addingToCart || !product?.id}
+                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark disabled:opacity-60"
+                      >
+                        Mua ngay
+                      </button>
 
                       <button
                         onClick={handleToggleWishlist}
@@ -920,522 +885,15 @@ const ShopDetails = () => {
               {/* <!-- tab content two end --> */}
 
               {/* <!-- tab content three start --> */}
-              <div>
-                <div
-                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabThree" ? "flex" : "hidden"
-                    }`}
-                >
-                  <div className="max-w-[570px] w-full">
-                    <h2 className="font-medium text-2xl text-dark mb-9">
-                      03 Review for this product
-                    </h2>
-
-                    <div className="flex flex-col gap-6">
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="max-w-[550px] w-full">
-                    <form>
-                      <h2 className="font-medium text-2xl text-dark mb-3.5">
-                        Add a Review
-                      </h2>
-
-                      <p className="mb-6">
-                        Your email address will not be published. Required
-                        fields are marked *
-                      </p>
-
-                      <div className="flex items-center gap-3 mb-7.5">
-                        <span>Your Rating*</span>
-
-                        <div className="flex items-center gap-1">
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-gray-5">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-gray-5">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="mb-5">
-                          <label htmlFor="comments" className="block mb-2.5">
-                            Comments
-                          </label>
-
-                          <textarea
-                            name="comments"
-                            id="comments"
-                            rows={5}
-                            placeholder="Your comments"
-                            className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                          ></textarea>
-
-                          <span className="flex items-center justify-between mt-2.5">
-                            <span className="text-custom-sm text-dark-4">
-                              Maximum
-                            </span>
-                            <span className="text-custom-sm text-dark-4">
-                              0/250
-                            </span>
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col lg:flex-row gap-5 sm:gap-7.5 mb-5.5">
-                          <div>
-                            <label htmlFor="name" className="block mb-2.5">
-                              Name
-                            </label>
-
-                            <input
-                              type="text"
-                              name="name"
-                              id="name"
-                              placeholder="Your name"
-                              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                            />
-                          </div>
-
-                          <div>
-                            <label htmlFor="email" className="block mb-2.5">
-                              Email
-                            </label>
-
-                            <input
-                              type="email"
-                              name="email"
-                              id="email"
-                              placeholder="Your email"
-                              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
-                        >
-                          Submit Reviews
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
+              <div className={activeTab === "tabThree" ? "block" : "hidden"}>
+                {shouldLoadFromApi && Number.isFinite(routeProductId) ? (
+                  <ProductReviewsTab
+                    productId={routeProductId}
+                    isAuthenticated={isAuthenticated}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-500 mt-12.5">Chọn sản phẩm để xem đánh giá.</p>
+                )}
               </div>
               {/* <!-- tab content three end --> */}
               {/* <!--== tab content end ==--> */}

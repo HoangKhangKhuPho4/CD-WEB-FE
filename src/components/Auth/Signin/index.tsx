@@ -38,6 +38,11 @@ const Signin = () => {
       setFormData((fd) => ({ ...fd, usernameOrEmail: pre }));
     }
   }, [searchParams]);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.google?.accounts?.id) {
+      setGoogleScriptReady(true);
+    }
+  }, []);
 
   const handleGoogleCredential = useCallback(
     async (credentialResponse: { credential: string }) => {
@@ -70,12 +75,18 @@ const Signin = () => {
   );
 
   useEffect(() => {
-    if (!googleScriptReady || !googleClientId || !googleBtnContainerRef.current) return;
+    // Kiểm tra chéo cả State lẫn Window Object
+    const isGoogleReady = googleScriptReady || (typeof window !== "undefined" && !!window.google?.accounts?.id);
+    
+    if (!isGoogleReady || !googleClientId || !googleBtnContainerRef.current) return;
     if (googleRenderedRef.current) return;
+    
     const container = googleBtnContainerRef.current;
     if (container.childNodes.length > 0) return;
+    
     const g = window.google;
     if (!g?.accounts?.id) return;
+    
     g.accounts.id.initialize({
       client_id: googleClientId,
       callback: handleGoogleCredential,
@@ -86,6 +97,7 @@ const Signin = () => {
       width: "100%",
       locale: "vi",
     });
+    
     googleRenderedRef.current = true;
   }, [googleScriptReady, googleClientId, handleGoogleCredential]);
 
@@ -184,7 +196,6 @@ const Signin = () => {
           dispatch(loginFailure(msg));
           toast.error(msg);
         } finally {
-          // BẮT BUỘC PHẢI CÓ DÒNG NÀY ĐỂ MỞ KHÓA NÚT DÙ THÀNH CÔNG HAY THẤT BẠI
           setLoading(false);
         }
       };
@@ -331,6 +342,21 @@ const Signin = () => {
                     </p>
                   ) : null}
                 </div>
+
+                <p className="text-center mt-4 flex flex-col gap-1">
+                  <Link
+                    href="/qr-login"
+                    className="text-blue text-sm ease-out duration-200 hover:underline"
+                  >
+                    Hiển thị mã QR (máy tính)
+                  </Link>
+                  <Link
+                    href="/qr-scan"
+                    className="text-blue text-sm ease-out duration-200 hover:underline"
+                  >
+                    Quét mã QR (điện thoại)
+                  </Link>
+                </p>
 
                 <p className="text-center mt-6">
                   Chưa có tài khoản?

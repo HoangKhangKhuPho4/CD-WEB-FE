@@ -1,61 +1,46 @@
 import React from "react";
-import { Testimonial } from "@/types/testimonial";
 import Image from "next/image";
+import Link from "next/link";
+import type { PublicReview } from "@/utils/reviewApi";
 
-const SingleItem = ({ testimonial }: { testimonial: Testimonial }) => {
+const SingleItem = ({ review }: { review: PublicReview }) => {
+  const text = review.content || review.title || "Khách hàng hài lòng với sản phẩm.";
+  const authorName = review.user?.name || review.user?.username || "Khách hàng";
+  const rating = Math.min(5, Math.max(1, review.rating ?? 5));
+
   return (
-    <div className="shadow-testimonial bg-white rounded-[10px] py-7.5 px-4 sm:px-8.5 m-1">
+    <div className="shadow-testimonial bg-white rounded-[10px] py-7.5 px-4 sm:px-8.5 m-1 h-full flex flex-col">
       <div className="flex items-center gap-1 mb-5">
-        <Image
-          src="/images/icons/icon-star.svg"
-          alt="star icon"
-          width={15}
-          height={15}
-        />
-        <Image
-          src="/images/icons/icon-star.svg"
-          alt="star icon"
-          width={15}
-          height={15}
-        />
-        <Image
-          src="/images/icons/icon-star.svg"
-          alt="star icon"
-          width={15}
-          height={15}
-        />
-        <Image
-          src="/images/icons/icon-star.svg"
-          alt="star icon"
-          width={15}
-          height={15}
-        />
-        <Image
-          src="/images/icons/icon-star.svg"
-          alt="star icon"
-          width={15}
-          height={15}
-        />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Image
+            key={i}
+            src="/images/icons/icon-star.svg"
+            alt=""
+            width={15}
+            height={15}
+            className={i < rating ? "opacity-100" : "opacity-25"}
+          />
+        ))}
       </div>
 
-      <p className="text-dark mb-6">{testimonial.review}</p>
+      <p className="text-dark mb-4 flex-1 line-clamp-4">{text}</p>
 
-      <a href="#" className="flex items-center gap-4">
-        <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-          <Image
-            src={testimonial.authorImg}
-            alt="author"
-            className="w-12.5 h-12.5 rounded-full overflow-hidden"
-            width={50}
-            height={50}
-          />
+      <div className="flex items-center gap-4 mt-auto">
+        <div className="w-12.5 h-12.5 rounded-full overflow-hidden bg-blue/10 flex items-center justify-center text-blue font-semibold">
+          {authorName.charAt(0).toUpperCase()}
         </div>
-
         <div>
-          <h3 className="font-medium text-dark">{testimonial.authorName}</h3>
-          <p className="text-custom-sm">{testimonial.authorRole}</p>
+          <h3 className="font-medium text-dark">{authorName}</h3>
+          {review.productName && (
+            <Link
+              href={`/shop-details/${review.productId}`}
+              className="text-custom-sm text-blue hover:underline line-clamp-1"
+            >
+              {review.productName}
+            </Link>
+          )}
         </div>
-      </a>
+      </div>
     </div>
   );
 };

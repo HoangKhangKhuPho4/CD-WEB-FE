@@ -1,11 +1,22 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
-import { getOrdersApi, cancelOrderApi, getOrderDetailApi } from "@/utils/ordersApi";
-import { useAppSelector } from "@/redux/store";
+import {
+  getOrdersApi,
+  cancelOrderApi,
+  getOrderDetailApi,
+  reorderOrderApi,
+} from "@/utils/ordersApi";
+import { qrService, paymentService, type QrGenerateResponse } from "@/utils/api";
+import { loadCartFromApi } from "@/utils/cartSync";
+import { useAppSelector, type AppDispatch } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
+import QRCode from "react-qr-code";
 import { hasPermission, hasStaffRole } from "@/utils/rbac";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import GhnTrackingPanel from "./GhnTrackingPanel";
 
 // --- Types ---
 type OrderSummary = {
@@ -51,6 +62,8 @@ type OrderDetail = {
   statusDisplay: string;
   paymentUrl?: string | null;
   transactionRef?: string | null;
+  trackingCode?: string | null;
+  ghnOrderCode?: string | null;
   subtotal: number;
   discountAmount: number;
   totalAmount: number;
@@ -60,6 +73,22 @@ type OrderDetail = {
   cancelledAt?: string | null;
   cancelReason?: string | null;
   items: OrderItem[];
+  timeline?: {
+    status: string;
+    note?: string;
+    changedBy?: string;
+    createdAt?: string;
+  }[];
+};
+
+const TIMELINE_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Chờ xác nhận",
+  CONFIRMED: "Đã xác nhận",
+  PROCESSING: "Đang xử lý",
+  SHIPPING: "Đang giao hàng",
+  DELIVERED: "Đã giao",
+  COMPLETED: "Hoàn thành",
+  CANCELLED: "Đã hủy",
 };
 
 // --- Status tabs ---
@@ -129,6 +158,99 @@ const OrderDetailModal = ({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [qrData, setQrData] = useState<QrGenerateResponse | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const [retryingPayment, setRetryingPayment] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!qrData?.sessionId || detail?.status !== "PENDING") return;
+    const timer = setInterval(async () => {
+      try {
+        const res = await qrService.getStatus(qrData.sessionId);
+        const st = res.data.data?.status;
+        if (st === "CONFIRMED") {
+          clearInterval(timer);
+          setQrData(null);
+          toast.success("Đơn hàng đã được xác nhận qua QR!");
+          const refreshed = await getOrderDetailApi(orderCode);
+          if (refreshed.success) setDetail(refreshed.data);
+        } else if (st === "EXPIRED") {
+          clearInterval(timer);
+          setQrData(null);
+          toast.error("Mã QR đã hết hạn");
+        }
+      } catch {
+        /* ignore poll errors */
+      }
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [qrData, detail?.status, orderCode]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setQrData(null);
+    }
+  }, [isOpen]);
+
+  const handleShowOrderQr = async () => {
+    if (!detail) return;
+    try {
+      const res = await qrService.generate("QR_ORDER_CONFIRMATION", detail.id);
+      if (res.data.success && res.data.data) {
+        setQrData(res.data.data);
+      } else {
+        toast.error(res.data.message || "Không tạo được mã QR");
+      }
+    } catch {
+      toast.error("Không tạo được mã QR xác nhận đơn");
+    }
+  };
+
+  const handleReorder = async () => {
+    setReordering(true);
+    try {
+      const data = await reorderOrderApi(orderCode);
+      if (data.success) {
+        await loadCartFromApi(dispatch);
+        toast.success("Đã thêm sản phẩm vào giỏ — chuyển tới giỏ hàng");
+        onClose();
+        router.push("/cart");
+      } else {
+        toast.error(data.message || "Không đặt lại được");
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Không đặt lại được";
+      toast.error(msg);
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    if (!detail) return;
+    setRetryingPayment(true);
+    try {
+      const res = await paymentService.retryPayment({
+        orderCode: detail.orderCode,
+      });
+      if (res.data?.success && res.data.data?.paymentUrl) {
+        window.location.href = res.data.data.paymentUrl;
+        return;
+      }
+      toast.error(res.data?.message || "Không tạo được link thanh toán");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Không tạo được link thanh toán";
+      toast.error(msg);
+    } finally {
+      setRetryingPayment(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && orderCode) {
@@ -208,6 +330,50 @@ const OrderDetailModal = ({
                 {detail.statusDisplay}
               </span>
             </div>
+
+            {/* Order timeline from API */}
+            <div className="mb-6">
+              <h4 className="font-medium text-dark mb-4">Tiến trình đơn hàng</h4>
+              {detail.timeline && detail.timeline.length > 0 ? (
+                <ol className="relative border-l border-gray-3 ml-3 space-y-6">
+                  {detail.timeline.map((step, idx) => {
+                    const isLast = idx === detail.timeline!.length - 1;
+                    return (
+                      <li key={`${step.status}-${idx}`} className="ml-6">
+                        <span
+                          className={`absolute -left-1.5 flex h-3 w-3 rounded-full ${
+                            isLast ? "bg-blue ring-4 ring-blue/20" : "bg-blue"
+                          }`}
+                        />
+                        <p className="text-sm font-medium text-dark">
+                          {TIMELINE_STATUS_LABELS[step.status] || step.status}
+                        </p>
+                        {step.note && (
+                          <p className="text-xs text-gray-600 mt-0.5">{step.note}</p>
+                        )}
+                        {step.changedBy && (
+                          <p className="text-xs text-gray-500">
+                            {step.changedBy}
+                          </p>
+                        )}
+                        {step.createdAt && (
+                          <p className="text-xs text-gray-500">
+                            {formatDate(step.createdAt)}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="text-sm text-gray-500">Chưa có lịch sử trạng thái.</p>
+              )}
+            </div>
+
+            <GhnTrackingPanel
+              trackingCode={detail.trackingCode}
+              ghnOrderCode={detail.ghnOrderCode}
+            />
 
             {/* Shipping info */}
             <div className="bg-gray-1 rounded-lg p-5 mb-6">
@@ -317,8 +483,66 @@ const OrderDetailModal = ({
               </div>
             )}
 
+            {detail.status === "PENDING" && (
+              <div className="mb-6 p-4 border border-gray-3 rounded-lg bg-gray-1">
+                <h4 className="font-medium text-dark mb-2 text-sm">
+                  Xác nhận đơn bằng QR
+                </h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Hiển thị mã trên máy tính, mở điện thoại đã đăng nhập →{" "}
+                  <Link href="/qr-scan" className="text-blue underline">
+                    Quét QR
+                  </Link>{" "}
+                  → xác nhận.
+                </p>
+                {qrData ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <QRCode value={qrData.qrContent} size={180} />
+                    <p className="text-xs text-gray-500">
+                      Hết hạn sau {qrData.expiresInSeconds}s — đang chờ xác nhận...
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setQrData(null)}
+                      className="text-xs text-blue hover:underline"
+                    >
+                      Đóng mã QR
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleShowOrderQr()}
+                    className="text-sm font-medium text-blue hover:underline"
+                  >
+                    Hiển thị mã QR xác nhận
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex flex-wrap gap-3 justify-end">
+              <button
+                type="button"
+                disabled={reordering}
+                onClick={() => void handleReorder()}
+                className="px-6 py-2.5 rounded-md border border-blue text-blue font-medium hover:bg-blue hover:text-white disabled:opacity-50"
+              >
+                {reordering ? "Đang thêm..." : "Mua lại"}
+              </button>
+              {detail.paymentStatus !== "PAID" &&
+                detail.status === "PENDING" &&
+                ["VNPAY", "MOMO", "ZALOPAY"].includes(detail.paymentMethod) && (
+                  <button
+                    type="button"
+                    disabled={retryingPayment}
+                    onClick={() => void handleRetryPayment()}
+                    className="px-6 py-2.5 rounded-md bg-green text-white font-medium hover:opacity-90 disabled:opacity-50"
+                  >
+                    {retryingPayment ? "Đang tạo link..." : "Thanh toán lại"}
+                  </button>
+                )}
               {detail.status === "PENDING" && (
                 <button
                   onClick={() => setCancelModalOpen(true)}
