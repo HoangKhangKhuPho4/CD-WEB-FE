@@ -112,14 +112,18 @@ export default function QrLoginPage() {
                   <div className="w-10 h-10 border-4 border-blue border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
+                <>
                 <QRCode
                   value={qrData?.qrContent || "loading"}
                   size={192}
                   level="M"
                   className={status === "EXPIRED" ? "opacity-30" : ""}
                 />
-                {/* DEBUG HOOK FOR AUTOMATED TESTING */}
-                <div id="debug-qr-token" style={{ display: 'none' }}>{qrData?.qrContent}</div>
+              
+                <div id="debug-qr-token" style={{ display: 'none' }}>
+                    {/* DEBUG HOOK FOR AUTOMATED TESTING */}
+                  {qrData?.qrContent}</div>
+                  </>
               )}
             </div>
 
