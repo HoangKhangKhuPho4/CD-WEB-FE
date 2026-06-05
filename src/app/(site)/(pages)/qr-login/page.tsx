@@ -121,7 +121,6 @@ export default function QrLoginPage() {
                 />
               
                 <div id="debug-qr-token" style={{ display: 'none' }}>
-                    {/* DEBUG HOOK FOR AUTOMATED TESTING */}
                   {qrData?.qrContent}</div>
                   </>
               )}
