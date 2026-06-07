@@ -2,24 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { adminStatisticsApi } from "@/utils/adminApi";
+import type { AnalyticsDateRange } from "@/utils/analyticsDateRange";
 import { formatVnd } from "@/utils/adminFormat";
 
-export default function PaymentMethods() {
+export default function PaymentMethods({ dateRange }: { dateRange?: AnalyticsDateRange }) {
   const [items, setItems] = useState<
     { label: string; orderCount: number; totalAmount: number; percentage: number; color?: string }[]
   >([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    const params = dateRange
+      ? { fromDate: dateRange.fromDate, toDate: dateRange.toDate }
+      : undefined;
     adminStatisticsApi
-      .paymentMethods()
+      .paymentMethods(params)
       .then((res) => setItems(res.data.paymentStats ?? []))
-      .catch(() => setItems([]));
-  }, []);
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [dateRange?.fromDate, dateRange?.toDate]);
 
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-3/50">
       <h3 className="text-lg font-bold text-dark mb-4">Phương thức thanh toán</h3>
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="h-24 animate-pulse bg-[#F7F9FC] rounded-lg" />
+      ) : items.length === 0 ? (
         <p className="text-sm text-[#8D93A5]">Chưa có dữ liệu</p>
       ) : (
         <ul className="space-y-3">

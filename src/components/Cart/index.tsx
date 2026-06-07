@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import SingleItem from "./SingleItem";
 import Breadcrumb from "../Common/Breadcrumb";
 import Link from "next/link";
-import { clearCartApi, loadCartFromApi } from "@/utils/cartSync";
+import { clearCartApi, loadCartFromApi, sanitizeGuestCartItems } from "@/utils/cartSync";
 import toast from "react-hot-toast";
 
 const Cart = () => {
@@ -17,16 +17,24 @@ const Cart = () => {
   const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
     let cancelled = false;
     setLoading(true);
-    loadCartFromApi(dispatch)
-      .catch(() => {
+
+    const load = async () => {
+      try {
+        if (isAuthenticated) {
+          await loadCartFromApi(dispatch);
+        } else {
+          await sanitizeGuestCartItems(dispatch, cartItems);
+        }
+      } catch {
         if (!cancelled) toast.error("Không tải được giỏ hàng");
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+
+    void load();
     return () => {
       cancelled = true;
     };

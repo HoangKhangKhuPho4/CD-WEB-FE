@@ -1,57 +1,79 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import StatsCards from "@/components/Admin/Dashboard/StatsCards";
 import RevenueChart from "@/components/Admin/Dashboard/RevenueChart";
 import OrderStatusChart from "@/components/Admin/Dashboard/OrderStatusChart";
 import BestSellingProducts from "@/components/Admin/Dashboard/BestSellingProducts";
 import PaymentMethods from "@/components/Admin/Dashboard/PaymentMethods";
+import RecentOrders from "@/components/Admin/Dashboard/RecentOrders";
+import ConversionRatePanel from "@/components/Admin/Dashboard/ConversionRatePanel";
+import CustomerSegmentsPanel from "@/components/Admin/Dashboard/CustomerSegmentsPanel";
+import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
 import PageHeader from "@/components/Admin/shared/PageHeader";
 import SalesAnalyticsPage from "@/components/Admin/Dashboard/SalesAnalyticsPage";
 import type { RootState } from "@/redux/store";
 import { hasPermission, isAdminUser } from "@/utils/rbac";
-import { useState } from "react";
+import {
+  resolveAnalyticsDateRange,
+  type AnalyticsTimeFilter,
+} from "@/utils/analyticsDateRange";
+import { downloadRevenueReportCsv } from "@/utils/exportRevenueReport";
 
-const timeFilters = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
+const timeFilters: AnalyticsTimeFilter[] = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
 
 function RevenueAnalyticsPage() {
-  const [activeFilter, setActiveFilter] = useState("30 ngày");
+  const [activeFilter, setActiveFilter] = useState<AnalyticsTimeFilter>("30 ngày");
+  const [exporting, setExporting] = useState(false);
+  const dateRange = useMemo(() => resolveAnalyticsDateRange(activeFilter), [activeFilter]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadRevenueReportCsv(dateRange);
+      toast.success("Đã tải báo cáo CSV");
+    } catch {
+      toast.error("Export thất bại");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Thống kê & Báo cáo"
-        subtitle="Phân tích doanh thu, đơn hàng và hiệu suất bán hàng"
+        subtitle={`Phân tích doanh thu · ${dateRange.fromDate} → ${dateRange.toDate}`}
         action={
-          <div className="flex items-center bg-white rounded-lg border border-gray-3 p-1">
-            {timeFilters.map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setActiveFilter(filter)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeFilter === filter ? "bg-[#1C274C] text-white" : "text-[#6C6F93] hover:text-dark"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
+          <AnalyticsTimeToolbar
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+            onExport={() => void handleExport()}
+            exporting={exporting}
+            filters={timeFilters}
+          />
         }
       />
-      <StatsCards />
+      <StatsCards dateRange={dateRange} />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
-          <RevenueChart />
+          <RevenueChart dateRange={dateRange} />
         </div>
         <div className="lg:col-span-2">
-          <OrderStatusChart />
+          <OrderStatusChart dateRange={dateRange} />
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BestSellingProducts />
-        <PaymentMethods />
+        <BestSellingProducts dateRange={dateRange} />
+        <PaymentMethods dateRange={dateRange} />
       </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ConversionRatePanel />
+        <CustomerSegmentsPanel />
+      </div>
+      <RecentOrders dateRange={dateRange} />
     </div>
   );
 }

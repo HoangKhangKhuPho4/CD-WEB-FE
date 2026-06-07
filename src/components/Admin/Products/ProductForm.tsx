@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProducts, type AdminProduct, type ProductStatus } from "@/components/Admin/Products/productsStore";
+import { adminProductApi, type AdminProductDetail } from "@/utils/adminApi";
+import { resolveBackendImageUrl } from "@/utils/productMapper";
 
 type Mode = "create" | "edit";
 
@@ -20,6 +22,45 @@ type FormState = {
   imageUrl: string;
 };
 
+function formatPriceInput(n: number): string {
+  if (!n) return "";
+  return n.toLocaleString("vi-VN");
+}
+
+function statusFromDetail(d: AdminProductDetail): ProductStatus {
+  const active = d.status === "ACTIVE";
+  const stock =
+    d.variants?.reduce((sum, v) => sum + (v.stockQuantity ?? 0), 0) ??
+    d.totalQuantity ??
+    0;
+  if (stock === 0) return "out_of_stock";
+  return active ? "selling" : "stopped";
+}
+
+function detailToFormState(d: AdminProductDetail): FormState {
+  const defaultVariant =
+    d.variants?.find((v) => v.isActive) ?? d.variants?.[0];
+  const stock =
+    d.variants?.reduce((sum, v) => sum + (v.stockQuantity ?? 0), 0) ??
+    d.totalQuantity ??
+    0;
+  const imageFromList = resolveBackendImageUrl(d.imageUrl);
+  const imageFromGallery = resolveBackendImageUrl(d.images?.[0]?.linkImage);
+
+  return {
+    name: d.name ?? "",
+    sku: defaultVariant?.skuCode ?? `SP-${d.id}`,
+    category: d.productType?.name ?? "",
+    manufacturer: d.producer?.name ?? "",
+    description: d.description ?? "",
+    price: formatPriceInput(defaultVariant?.price ?? d.basePrice ?? 0),
+    stock: stock > 0 ? String(stock) : "",
+    status: statusFromDetail(d),
+    featured: !!d.isFeatured,
+    imageUrl: imageFromList ?? imageFromGallery ?? "",
+  };
+}
+
 function toFormState(p?: AdminProduct): FormState {
   return {
     name: p?.name ?? "",
@@ -27,7 +68,7 @@ function toFormState(p?: AdminProduct): FormState {
     category: p?.category ?? "",
     manufacturer: p?.manufacturer ?? "",
     description: p?.description ?? "",
-    price: p ? String(p.price) : "",
+    price: p ? formatPriceInput(p.price) : "",
     stock: p ? String(p.stock) : "",
     status: p?.status ?? "selling",
     featured: p?.featured ?? false,
@@ -49,14 +90,43 @@ export default function ProductForm({
   productId?: string;
 }) {
   const router = useRouter();
-  const { createProduct, updateProduct, getById, categories, manufacturers } = useProducts();
+  const { createProduct, updateProduct, categories, manufacturers } = useProducts();
 
-  const existing = useMemo(() => (productId ? getById(productId) : undefined), [getById, productId]);
-  const [form, setForm] = useState<FormState>(() => toFormState(existing));
+  const [form, setForm] = useState<FormState>(() => toFormState());
+  const [loadingProduct, setLoadingProduct] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const title = mode === "create" ? "Thêm Sản Phẩm Mới" : "Chỉnh sửa sản phẩm";
+
+  useEffect(() => {
+    if (mode !== "edit" || !productId) return;
+
+    let cancelled = false;
+    setLoadingProduct(true);
+    setError(null);
+
+    void adminProductApi
+      .get(Number(productId))
+      .then((res) => {
+        if (cancelled) return;
+        if (res.data.success && res.data.data) {
+          setForm(detailToFormState(res.data.data));
+        } else {
+          setError(res.data.message || "Không tải được thông tin sản phẩm");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError("Không tải được thông tin sản phẩm");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, productId]);
 
   const onSubmit = async (publish: boolean) => {
     setError(null);
@@ -105,7 +175,7 @@ export default function ProductForm({
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${loadingProduct ? "opacity-60 pointer-events-none" : ""}`}>
       {/* Breadcrumb + Title */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -116,7 +186,12 @@ export default function ProductForm({
             {"  /  "}
             <span className="text-[#6C6F93]">{mode === "create" ? "Thêm sản phẩm mới" : "Chỉnh sửa"}</span>
           </p>
-          <h1 className="text-2xl font-bold text-dark mt-2">{title}</h1>
+          <h1 className="text-2xl font-bold text-dark mt-2 flex items-center gap-3">
+            {title}
+            {loadingProduct && (
+              <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#3C50E0] border-t-transparent" />
+            )}
+          </h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -203,11 +278,10 @@ export default function ProductForm({
                   >
                     <option value="">Chọn thương hiệu</option>
                     {manufacturers.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
+                      <option key={m.value} value={m.value}>
+                        {m.label}
                       </option>
                     ))}
-                    <option value="Samsung">Samsung</option>
                   </select>
                 </div>
               </div>

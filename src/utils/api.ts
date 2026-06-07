@@ -449,6 +449,9 @@ export const checkoutService = {
   previewCoupon: (code: string) =>
     api.get<ApiResponse<{
       couponCode: string;
+      discountType?: string;
+      discountValue?: number;
+      originalSubtotal?: number;
       discountAmount: number;
       finalAmount: number;
       message?: string;

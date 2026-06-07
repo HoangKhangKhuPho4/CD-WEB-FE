@@ -1,8 +1,11 @@
 export interface WarrantyStats {
-  filteredTotal: number;
-  processing: number;
+  total: number;
+  pending: number;
+  inProgress: number;
   completed: number;
-  closed: number;
+  cancelled: number;
+  returned: number;
+  filteredTotal: number;
 }
 
 export default function WarrantyStatsCards({
@@ -14,30 +17,30 @@ export default function WarrantyStatsCards({
 }) {
   const cards = [
     {
-      label: "Tổng phiếu (bộ lọc hiện tại)",
-      value: stats.filteredTotal,
-      trend: "Theo tìm kiếm & trạng thái",
+      label: "Tổng phiếu hệ thống",
+      value: stats.total,
+      trend: `${stats.filteredTotal} theo bộ lọc hiện tại`,
       iconBg: "bg-[#3C50E0]/10",
       iconColor: "#3C50E0",
     },
     {
       label: "Đang xử lý",
-      value: stats.processing,
-      trend: "PENDING + IN_PROGRESS",
+      value: stats.pending + stats.inProgress,
+      trend: `Chờ: ${stats.pending} · Sửa: ${stats.inProgress}`,
       iconBg: "bg-[#F3E8FF]",
       iconColor: "#9333EA",
     },
     {
-      label: "Hoàn tất",
+      label: "Hoàn tất sửa chữa",
       value: stats.completed,
-      trend: "COMPLETED",
+      trend: "Chờ khách nhận máy",
       iconBg: "bg-green-light-6",
       iconColor: "#22AD5C",
     },
     {
       label: "Đã đóng",
-      value: stats.closed,
-      trend: "RETURNED + CANCELLED",
+      value: stats.returned + stats.cancelled,
+      trend: `Trả: ${stats.returned} · Hủy: ${stats.cancelled}`,
       iconBg: "bg-red-light-6",
       iconColor: "#F23030",
     },

@@ -5,7 +5,7 @@ import ProductForm from "@/components/Admin/Products/ProductForm";
 
 export default function AdminNewProductPage() {
   return (
-    <ProductsProvider>
+    <ProductsProvider variant="form">
       <ProductForm mode="create" />
     </ProductsProvider>
   );

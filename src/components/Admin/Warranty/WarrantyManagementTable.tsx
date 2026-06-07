@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import AdminPagination from "@/components/Admin/shared/AdminPagination";
+import AdminTablePagination from "@/components/Admin/shared/AdminTablePagination";
+import {
+  warrantyStatusBadge,
+  warrantyStatusLabel,
+} from "@/components/Admin/Warranty/warrantyUtils";
 import { adminWarrantyApi, type WarrantyTicket } from "@/utils/adminApi";
 import { formatDate } from "@/utils/adminFormat";
-
-export type WarrantyStatus = "processing" | "completed" | "rejected";
 
 export interface WarrantyRow {
   id: string;
@@ -18,16 +20,8 @@ export interface WarrantyRow {
   imei: string;
   issue: string;
   receivedAt: string;
-  status: WarrantyStatus;
   rawStatus?: string;
   statusDisplay?: string;
-}
-
-function mapStatus(s?: string): WarrantyStatus {
-  const u = (s ?? "").toUpperCase();
-  if (u === "COMPLETED") return "completed";
-  if (u === "CANCELLED" || u === "RETURNED") return "rejected";
-  return "processing";
 }
 
 export function mapTicket(t: WarrantyTicket): WarrantyRow {
@@ -41,35 +35,36 @@ export function mapTicket(t: WarrantyTicket): WarrantyRow {
     imei: t.imei ?? t.serialNumber ?? "—",
     issue: t.issueDescription ?? "—",
     receivedAt: formatDate(t.receivedAt),
-    status: mapStatus(t.status),
     rawStatus: t.status,
     statusDisplay: t.statusDisplay,
   };
 }
 
-const statusConfig: Record<WarrantyStatus, { label: string; dot: string; className: string }> = {
-  processing: { label: "Đang xử lý", dot: "bg-[#3C50E0]", className: "bg-[#EEF2FF] text-[#3C50E0]" },
-  completed: { label: "Hoàn tất", dot: "bg-green", className: "bg-green-light-6 text-green" },
-  rejected: { label: "Từ chối", dot: "bg-red", className: "bg-red-light-6 text-red" },
-};
-
-const PER_PAGE = 10;
+const PAGE_SIZE_OPTIONS = [10, 15, 20, 50];
 
 export default function WarrantyManagementTable({
   onView,
   refreshKey = 0,
   keyword = "",
   status = "",
+  fromDate = "",
+  toDate = "",
   page = 1,
+  pageSize = 10,
   onPageChange,
+  onPageSizeChange,
   onTotalsChange,
 }: {
   onView?: (row: WarrantyRow) => void;
   refreshKey?: number;
   keyword?: string;
   status?: string;
+  fromDate?: string;
+  toDate?: string;
   page?: number;
+  pageSize?: number;
   onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   onTotalsChange?: (total: number) => void;
 }) {
   const [rows, setRows] = useState<WarrantyRow[]>([]);
@@ -96,9 +91,11 @@ export default function WarrantyManagementTable({
       try {
         const res = await adminWarrantyApi.list({
           page: page - 1,
-          size: PER_PAGE,
+          size: pageSize,
           keyword: keyword.trim() || undefined,
           status: status || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
         });
         if (cancelled) return;
         if (res.data.success) {
@@ -123,7 +120,7 @@ export default function WarrantyManagementTable({
     return () => {
       cancelled = true;
     };
-  }, [page, keyword, status, refreshKey]);
+  }, [page, pageSize, keyword, status, fromDate, toDate, refreshKey]);
 
   if (initialLoading) {
     return <p className="px-6 py-8 text-sm text-[#8D93A5]">Đang tải phiếu bảo hành...</p>;
@@ -173,7 +170,8 @@ export default function WarrantyManagementTable({
                 </tr>
               ) : (
                 rows.map((row) => {
-                  const st = statusConfig[row.status];
+                  const st = warrantyStatusBadge(row.rawStatus);
+                  const label = row.statusDisplay ?? warrantyStatusLabel(row.rawStatus);
                   return (
                     <tr key={row.id} className="hover:bg-[#F7F9FC]/60 transition-colors">
                       <td className="px-6 py-4">
@@ -194,7 +192,7 @@ export default function WarrantyManagementTable({
                           className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium ${st.className}`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                          {row.statusDisplay ?? st.label}
+                          {label}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -213,17 +211,28 @@ export default function WarrantyManagementTable({
             </tbody>
           </table>
         </div>
+        {onPageChange && totalElements > 0 && (
+          <div className="px-6 py-4 border-t border-gray-3/50">
+            <AdminTablePagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              pageSize={pageSize}
+              onPageChange={onPageChange}
+              onPageSizeChange={
+                onPageSizeChange
+                  ? (size) => {
+                      onPageSizeChange(size);
+                      onPageChange(1);
+                    }
+                  : undefined
+              }
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              label="phiếu bảo hành"
+            />
+          </div>
+        )}
       </div>
-      {onPageChange && (
-        <AdminPagination
-          page={page}
-          totalPages={totalPages}
-          totalElements={totalElements}
-          pageSize={PER_PAGE}
-          onPageChange={onPageChange}
-          label="phiếu bảo hành"
-        />
-      )}
     </div>
   );
 }

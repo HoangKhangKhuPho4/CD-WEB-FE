@@ -2,20 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { adminStatisticsApi } from "@/utils/adminApi";
+import type { AnalyticsDateRange } from "@/utils/analyticsDateRange";
 
-export default function OrderStatusChart() {
+export default function OrderStatusChart({ dateRange }: { dateRange?: AnalyticsDateRange }) {
   const [breakdown, setBreakdown] = useState<
     { label: string; count: number; percentage: number; color: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    const params = dateRange
+      ? { fromDate: dateRange.fromDate, toDate: dateRange.toDate }
+      : undefined;
     adminStatisticsApi
-      .orderStatus()
+      .orderStatus(params)
       .then((res) => setBreakdown(res.data.statusBreakdown ?? []))
       .catch(() => setBreakdown([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [dateRange?.fromDate, dateRange?.toDate]);
 
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-3/50">

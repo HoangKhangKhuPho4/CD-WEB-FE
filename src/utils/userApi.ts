@@ -11,6 +11,8 @@ export type ApiUserProfile = {
   birth?: string;
   gender?: string;
   address?: string;
+  provider?: string;
+  avatarUrl?: string;
   createdAt?: string;
   updatedAt?: string;
   lastLoginAt?: string | null;
@@ -31,6 +33,8 @@ export function mapApiUserToAuthUser(data: ApiUserProfile): User {
     birth: data.birth,
     gender: data.gender,
     address: data.address,
+    provider: data.provider,
+    avatarUrl: data.avatarUrl,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     lastLoginAt: data.lastLoginAt,
@@ -52,6 +56,8 @@ export function normalizeAuthUser(raw: User & { fullName?: string }): User {
     birth: raw.birth ?? undefined,
     gender: raw.gender ?? undefined,
     address: raw.address ?? undefined,
+    provider: raw.provider ?? undefined,
+    avatarUrl: raw.avatarUrl ?? undefined,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     lastLoginAt: raw.lastLoginAt,

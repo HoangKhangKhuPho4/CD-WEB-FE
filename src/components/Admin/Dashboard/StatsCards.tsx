@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminStatisticsApi, type OverviewStatistics } from "@/utils/adminApi";
+import type { AnalyticsDateRange } from "@/utils/analyticsDateRange";
 import { formatPercent, formatVnd } from "@/utils/adminFormat";
 
 const cardStyles = [
@@ -11,17 +12,21 @@ const cardStyles = [
   { bg: "from-[#FFECE1] to-[#FFECE1]/60", accent: "#F27430" },
 ];
 
-export default function StatsCards() {
+export default function StatsCards({ dateRange }: { dateRange?: AnalyticsDateRange }) {
   const [data, setData] = useState<OverviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    const params = dateRange
+      ? { fromDate: dateRange.fromDate, toDate: dateRange.toDate }
+      : undefined;
     adminStatisticsApi
-      .overview()
+      .overview(params)
       .then((res) => setData(res.data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [dateRange?.fromDate, dateRange?.toDate]);
 
   if (loading) {
     return (
@@ -66,7 +71,7 @@ export default function StatsCards() {
           <p className="text-xs text-[#606882] mb-1">{stat.label}</p>
           <p className="text-xl font-bold text-dark">{stat.value}</p>
           {stat.change ? (
-            <p className="text-xs font-medium text-green mt-2">{stat.change} so với tháng trước</p>
+            <p className="text-xs font-medium text-green mt-2">{stat.change} so với kỳ trước</p>
           ) : null}
         </div>
       ))}

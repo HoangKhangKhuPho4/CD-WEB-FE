@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import OrderBulkToolbar from "@/components/Admin/Orders/OrderBulkToolbar";
+import OrderPagination from "@/components/Admin/Orders/OrderPagination";
 import { useOrdersAdmin } from "@/components/Admin/Orders/ordersAdminStore";
 import { formatDateTime, formatVnd } from "@/utils/adminFormat";
 
@@ -106,7 +107,12 @@ export default function OrderTable({ onView }: { onView: (orderId: number) => vo
                     <td className="px-4 py-4 text-sm font-semibold text-blue">
                       {order.orderCode}
                     </td>
-                    <td className="px-4 py-4 text-sm text-dark">{order.customerName}</td>
+                    <td className="px-4 py-4 text-sm text-dark">
+                      <p>{order.customerName}</p>
+                      {order.customerPhone ? (
+                        <p className="text-xs text-[#8D93A5] mt-0.5">{order.customerPhone}</p>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-4 text-sm text-[#606882]">
                       {formatDateTime(order.createdAt)}
                     </td>
@@ -139,6 +145,9 @@ export default function OrderTable({ onView }: { onView: (orderId: number) => vo
               )}
             </tbody>
           </table>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-3/50">
+          <OrderPagination />
         </div>
       </div>
     </div>

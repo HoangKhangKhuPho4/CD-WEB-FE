@@ -6,6 +6,7 @@ import {
 } from "@/redux/features/cart-slice";
 import { cartService, type Cart, type CartItem as ApiCartItem } from "@/utils/api";
 import { fetchProductDetail } from "@/utils/productApi";
+import { resolveBackendImageUrl } from "@/utils/productMapper";
 import toast from "react-hot-toast";
 
 export type CartProductPayload = {
@@ -26,10 +27,8 @@ export function formatVnd(amount: number) {
 export function mapApiCartToReduxItems(cart: Cart): CartItem[] {
   return (cart.items ?? []).map((item: ApiCartItem) => {
     const v = item.variant;
-    const img =
-      item.imageUrl ||
-      v?.imageUrl ||
-      "/images/products/product-1-bg-1.png";
+    const rawImg = item.imageUrl || v?.imageUrl;
+    const img = resolveBackendImageUrl(rawImg) || "/images/products/product-1-bg-1.png";
     const productId = v?.product?.id ?? 0;
     return {
       id: item.id,
@@ -51,6 +50,42 @@ export async function loadCartFromApi(dispatch: AppDispatch): Promise<void> {
   const res = await cartService.getCart();
   if (res.data?.success && res.data.data) {
     dispatch(setCartItems(mapApiCartToReduxItems(res.data.data)));
+  }
+}
+
+/** Loại sản phẩm khách vãng lai không còn tồn tại / đã ngừng kinh doanh. */
+export async function sanitizeGuestCartItems(
+  dispatch: AppDispatch,
+  items: CartItem[]
+): Promise<void> {
+  const guestItems = items.filter(isGuestCartItem);
+  if (guestItems.length === 0) return;
+
+  const kept: CartItem[] = [];
+  let removed = 0;
+
+  for (const item of items) {
+    if (!isGuestCartItem(item)) {
+      kept.push(item);
+      continue;
+    }
+    const productId = item.productId ?? item.id;
+    try {
+      const raw = await fetchProductDetail(productId);
+      const active = raw != null && raw.active !== 0;
+      if (active && raw?.variants?.some((v) => v.isActive !== false)) {
+        kept.push(item);
+      } else {
+        removed += 1;
+      }
+    } catch {
+      removed += 1;
+    }
+  }
+
+  if (removed > 0) {
+    dispatch(setCartItems(kept));
+    toast.success("Đã loại bỏ sản phẩm không còn kinh doanh khỏi giỏ hàng");
   }
 }
 

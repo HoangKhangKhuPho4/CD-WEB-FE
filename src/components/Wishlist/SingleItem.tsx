@@ -8,6 +8,7 @@ import { WishListItem } from "@/redux/features/wishlist-slice";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { resolveBackendImageUrl } from "@/utils/productMapper";
 
 const SingleItem = ({ item }: { item: WishListItem }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -15,7 +16,8 @@ const SingleItem = ({ item }: { item: WishListItem }) => {
   const productName = item.product?.name || "Sản phẩm";
   const productPrice = item.product?.price || 0;
   const productImage =
-    item.product?.images?.[0]?.linkImage || "/images/no-image.png";
+    resolveBackendImageUrl(item.product?.images?.[0]?.linkImage) ||
+    "/images/no-image.png";
   const variantName = item.variant?.name || "";
   const createdAt = item.createdAt
     ? new Date(item.createdAt).toLocaleDateString("vi-VN", {

@@ -25,7 +25,7 @@ export const ADMIN_ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/admin/imei": ["IMEI_MANAGE"],
   "/admin/return": ["STOCK_RETURN"],
   "/admin/customers": ["USER_MANAGE", "CUSTOMER_VIEW"],
-  "/admin/reviews": ["PRODUCT_MANAGE"],
+  "/admin/reviews": ["REVIEW_MANAGE", "REVIEW_REPLY", "PRODUCT_MANAGE", "WARRANTY_MANAGE"],
   "/admin/banners": ["ROLE_ADMIN"],
   "/admin/posts": ["ROLE_ADMIN"],
   "/admin/settings": ["SYSTEM_CONFIG_MANAGE", "AI_MODEL_TRAIN"],

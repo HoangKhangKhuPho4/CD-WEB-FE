@@ -5,7 +5,19 @@ import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { updateUser } from "@/redux/features/auth-slice";
 import { canAccessAdminPanel } from "@/utils/adminApi";
-import { getMe } from "@/utils/userApi";
+import { getMe, normalizeAuthUser } from "@/utils/userApi";
+import type { User } from "@/types/auth";
+
+function readCachedUser(): User | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("user") ?? sessionStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return normalizeAuthUser(JSON.parse(raw) as User & { fullName?: string });
+  } catch {
+    return null;
+  }
+}
 
 export default function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +36,12 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
         return;
       }
 
+      const cached = readCachedUser();
+      if (cached && canAccessAdminPanel(cached)) {
+        dispatch(updateUser(cached));
+        setReady(true);
+      }
+
       try {
         const user = await getMe();
         if (cancelled) return;
@@ -34,7 +52,7 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
         }
         setReady(true);
       } catch {
-        if (!cancelled) router.replace("/signin?redirect=/admin");
+        if (!cancelled && !cached) router.replace("/signin?redirect=/admin");
       }
     }
 

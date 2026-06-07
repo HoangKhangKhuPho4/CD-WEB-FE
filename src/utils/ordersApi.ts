@@ -1,16 +1,31 @@
-import api from './api';
+import api, { type ApiResponse } from "./api";
+import type { Page } from "@/types/api";
+
+export type OrderSummaryApi = {
+  id: number;
+  orderCode: string;
+  status: string;
+  statusDisplay: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  totalAmount: number;
+  totalItems: number;
+  firstItemName: string;
+  firstItemImage: string;
+  orderDate: string;
+};
 
 // 1. Lấy danh sách đơn hàng (phân trang + filter trạng thái)
 export const getOrdersApi = async (
   page: number = 0,
   size: number = 10,
   status?: string
-) => {
-  const params: Record<string, any> = { page, size };
+): Promise<ApiResponse<Page<OrderSummaryApi>>> => {
+  const params: Record<string, string | number> = { page, size };
   if (status) {
     params.status = status;
   }
-  const res = await api.get('/orders', { params });
+  const res = await api.get<ApiResponse<Page<OrderSummaryApi>>>("/orders", { params });
   return res.data;
 };
 

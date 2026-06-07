@@ -2,21 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { adminReviewApi } from "@/utils/adminApi";
+import { adminReviewApi, type AdminReviewStats } from "@/utils/adminApi";
 import { formatDateTime } from "@/utils/adminFormat";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
+type StatusFilter = "all" | "pending" | "approved";
 
 interface ReviewItem {
   id: number;
   productName: string;
   customerName: string;
   rating: number;
+  title: string;
   content: string;
   reply?: string;
   date: string;
   time: string;
   status: ReviewStatus;
+  verified: boolean;
 }
 
 const statusStyles: Record<ReviewStatus, string> = {
@@ -28,13 +31,20 @@ const statusStyles: Record<ReviewStatus, string> = {
 const statusLabels: Record<ReviewStatus, string> = {
   pending: "Chờ duyệt",
   approved: "Đã duyệt",
-  rejected: "Từ chối",
+  rejected: "Đã ẩn",
 };
 
 function mapStatus(isApproved?: boolean | null): ReviewStatus {
   if (isApproved === true) return "approved";
   if (isApproved === false) return "rejected";
   return "pending";
+}
+
+function reviewText(title?: string, content?: string): string {
+  const t = title?.trim();
+  const c = content?.trim();
+  if (t && c) return `${t} — ${c}`;
+  return t || c || "—";
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -58,17 +68,40 @@ function StarRating({ rating }: { rating: number }) {
 
 export default function ReviewManagementTable() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [stats, setStats] = useState<AdminReviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [replyId, setReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [keyword, setKeyword] = useState("");
+  const [ratingFilter, setRatingFilter] = useState<number | "">("");
+  const [selected, setSelected] = useState<number[]>([]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await adminReviewApi.stats();
+      if (res.data.success) setStats(res.data.data);
+    } catch {
+      /* optional */
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await adminReviewApi.list({ page, size: 10 });
+      const params: Parameters<typeof adminReviewApi.list>[0] = {
+        page,
+        size: 10,
+        keyword: keyword.trim() || undefined,
+        rating: ratingFilter === "" ? undefined : ratingFilter,
+      };
+      if (statusFilter === "pending") params.isApproved = false;
+      if (statusFilter === "approved") params.isApproved = true;
+
+      const res = await adminReviewApi.list(params);
       if (res.data.success) {
         const pageData = res.data.data;
         setTotalPages(pageData.totalPages);
@@ -76,27 +109,38 @@ export default function ReviewManagementTable() {
         setReviews(
           pageData.content.map((r) => {
             const full = r.createdAt ? formatDateTime(r.createdAt) : "—";
-            const [date = "—", time = ""] = full.includes(",") ? full.split(",").map((s) => s.trim()) : [full, ""];
+            const [date = "—", time = ""] = full.includes(",")
+              ? full.split(",").map((s) => s.trim())
+              : [full, ""];
             return {
               id: r.id,
               productName: r.productName ?? "—",
               customerName: r.user?.name ?? r.user?.username ?? "Khách",
               rating: r.rating ?? 0,
-              content: r.content ?? "",
+              title: r.title ?? "",
+              content: reviewText(r.title, r.content),
               reply: r.replyContent,
               date,
               time,
               status: mapStatus(r.isApproved),
+              verified: !!r.isVerifiedPurchase,
             };
           })
         );
+        setSelected([]);
+      } else {
+        toast.error(res.data.message || "Không tải được đánh giá");
       }
     } catch {
       toast.error("Không tải được đánh giá");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, statusFilter, keyword, ratingFilter]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     void load();
@@ -107,19 +151,38 @@ export default function ReviewManagementTable() {
       await adminReviewApi.updateStatus(id, approved);
       toast.success(approved ? "Đã duyệt đánh giá" : "Đã ẩn đánh giá");
       await load();
+      await loadStats();
     } catch {
       toast.error("Cập nhật trạng thái thất bại");
+    }
+  };
+
+  const bulkApprove = async (approved: boolean) => {
+    if (!selected.length) return;
+    try {
+      await adminReviewApi.bulkStatus(selected, approved);
+      toast.success(approved ? "Đã duyệt hàng loạt" : "Đã ẩn hàng loạt");
+      await load();
+      await loadStats();
+    } catch {
+      toast.error("Cập nhật hàng loạt thất bại");
     }
   };
 
   const submitReply = async () => {
     if (!replyId || !replyText.trim()) return;
     try {
-      await adminReviewApi.reply(replyId, replyText.trim());
+      const existing = reviews.find((r) => r.id === replyId)?.reply;
+      if (existing) {
+        await adminReviewApi.updateReply(replyId, replyText.trim());
+      } else {
+        await adminReviewApi.reply(replyId, replyText.trim());
+      }
       toast.success("Đã gửi phản hồi");
       setReplyId(null);
       setReplyText("");
       await load();
+      await loadStats();
     } catch {
       toast.error("Gửi phản hồi thất bại");
     }
@@ -131,42 +194,166 @@ export default function ReviewManagementTable() {
       await adminReviewApi.remove(id);
       toast.success("Đã xóa đánh giá");
       await load();
+      await loadStats();
     } catch {
       toast.error("Xóa đánh giá thất bại");
     }
   };
 
+  const toggleSelect = (id: number) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-dark">Quản lý đánh giá</h1>
-          <p className="text-sm text-[#6C6F93] mt-1">Kiểm duyệt và phản hồi đánh giá của khách hàng</p>
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-3/50 p-4">
+            <p className="text-xs text-[#8D93A5]">Tổng đánh giá</p>
+            <p className="text-2xl font-bold text-dark">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-3/50 p-4">
+            <p className="text-xs text-[#8D93A5]">Chờ duyệt</p>
+            <p className="text-2xl font-bold text-yellow-dark-2">{stats.pending}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-3/50 p-4">
+            <p className="text-xs text-[#8D93A5]">Đã duyệt</p>
+            <p className="text-2xl font-bold text-green">{stats.approved}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-3/50 p-4">
+            <p className="text-xs text-[#8D93A5]">Chưa trả lời</p>
+            <p className="text-2xl font-bold text-[#3C50E0]">{stats.unrepliedCount}</p>
+          </div>
         </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-3/50 p-4 flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="text-xs text-[#8D93A5] block mb-1">Trạng thái</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(0);
+              setStatusFilter(e.target.value as StatusFilter);
+            }}
+            className="px-3 py-2 border border-gray-3 rounded-lg text-sm"
+          >
+            <option value="all">Tất cả</option>
+            <option value="pending">Chờ duyệt</option>
+            <option value="approved">Đã duyệt</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-[#8D93A5] block mb-1">Số sao</label>
+          <select
+            value={ratingFilter}
+            onChange={(e) => {
+              setPage(0);
+              setRatingFilter(e.target.value === "" ? "" : Number(e.target.value));
+            }}
+            className="px-3 py-2 border border-gray-3 rounded-lg text-sm"
+          >
+            <option value="">Tất cả</option>
+            {[5, 4, 3, 2, 1].map((s) => (
+              <option key={s} value={s}>
+                {s} sao
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-xs text-[#8D93A5] block mb-1">Tìm kiếm</label>
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && setPage(0)}
+            placeholder="Sản phẩm, khách, nội dung..."
+            className="w-full px-3 py-2 border border-gray-3 rounded-lg text-sm"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setPage(0);
+            void load();
+          }}
+          className="px-4 py-2 text-sm font-semibold text-white bg-[#3C50E0] rounded-lg"
+        >
+          Lọc
+        </button>
+        {selected.length > 0 && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void bulkApprove(true)}
+              className="px-3 py-2 text-xs font-medium text-green bg-green-light-6 rounded-lg"
+            >
+              Duyệt ({selected.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => void bulkApprove(false)}
+              className="px-3 py-2 text-xs font-medium text-red bg-red-light-6 rounded-lg"
+            >
+              Ẩn ({selected.length})
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-3/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           {loading ? (
             <p className="px-6 py-10 text-sm text-[#8D93A5]">Đang tải...</p>
+          ) : reviews.length === 0 ? (
+            <p className="px-6 py-10 text-sm text-[#8D93A5] text-center">
+              Chưa có đánh giá phù hợp bộ lọc.
+            </p>
           ) : (
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b border-gray-3/50">
-                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide">Sản phẩm & Khách hàng</th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[120px]">Đánh giá</th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide">Nội dung</th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[130px]">Ngày gửi</th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[120px]">Trạng thái</th>
-                  <th className="text-center px-6 py-4 text-xs font-bold text-dark tracking-wide w-[160px]">Hành động</th>
+                  <th className="px-4 py-4 w-10" />
+                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide">
+                    Sản phẩm & Khách hàng
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[120px]">
+                    Đánh giá
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide">
+                    Nội dung
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[130px]">
+                    Ngày gửi
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-dark tracking-wide w-[120px]">
+                    Trạng thái
+                  </th>
+                  <th className="text-center px-6 py-4 text-xs font-bold text-dark tracking-wide w-[160px]">
+                    Hành động
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-3/50">
                 {reviews.map((review) => (
                   <tr key={review.id} className="hover:bg-[#F7F9FC]/50 transition-colors">
+                    <td className="px-4 py-5 align-top">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(review.id)}
+                        onChange={() => toggleSelect(review.id)}
+                      />
+                    </td>
                     <td className="px-6 py-5 align-top">
                       <p className="text-sm font-semibold text-dark">{review.productName}</p>
                       <p className="text-xs text-[#6C6F93] mt-1">{review.customerName}</p>
+                      {review.verified && (
+                        <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-green-light-6 text-green">
+                          Đã mua
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-5 align-top">
                       <StarRating rating={review.rating} />
@@ -184,7 +371,9 @@ export default function ReviewManagementTable() {
                       <p className="text-xs text-[#8D93A5]">{review.time}</p>
                     </td>
                     <td className="px-6 py-5 align-top">
-                      <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${statusStyles[review.status]}`}>
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${statusStyles[review.status]}`}
+                      >
                         {statusLabels[review.status]}
                       </span>
                     </td>

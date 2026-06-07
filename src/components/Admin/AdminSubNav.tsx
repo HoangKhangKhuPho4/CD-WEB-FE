@@ -10,7 +10,7 @@ export default function AdminSubNav({ links }: { links: NavLink[] }) {
   const user = useAppSelector((s) => s.authReducer.user);
   const visible = filterNavLinks(user, links);
 
-  if (visible.length === 0) return null;
+  if (visible.length <= 1) return null;
 
   return (
     <div className="flex flex-wrap gap-2 bg-white rounded-lg border border-gray-3/50 p-1 w-fit">

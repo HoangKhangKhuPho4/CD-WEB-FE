@@ -15,6 +15,11 @@ import {
   GhnDistrict,
   GhnWard,
 } from "@/utils/api";
+import {
+  fetchAvailableCoupons,
+  formatCouponLabel,
+  type PublicCoupon,
+} from "@/utils/couponApi";
 import { useAppSelector } from "@/redux/store";
 
 type CartLine = {
@@ -39,6 +44,9 @@ const CheckoutPage = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [couponCode, setCouponCode] = useState("");
+  const [appliedCouponCode, setAppliedCouponCode] = useState("");
+  const [availableCoupons, setAvailableCoupons] = useState<PublicCoupon[]>([]);
+  const [couponApplying, setCouponApplying] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
@@ -108,6 +116,9 @@ const CheckoutPage = () => {
       }),
       shippingService.getProvinces().then((r) => {
         if (r.data.success) setProvinces(r.data.data || []);
+      }),
+      fetchAvailableCoupons().then((r) => {
+        if (r.ok) setAvailableCoupons(r.data);
       }),
     ]).finally(() => setLoading(false));
   }, [isAuthenticated, loadCart, router]);
@@ -221,13 +232,18 @@ const CheckoutPage = () => {
     if (res.data.success) setWards(res.data.data || []);
   };
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+  const applyCoupon = async (codeOverride?: string) => {
+    const code = (codeOverride ?? couponCode).trim().toUpperCase();
+    if (!code) return;
+    setCouponApplying(true);
     try {
-      const res = await checkoutService.previewCoupon(couponCode.trim());
+      const res = await checkoutService.previewCoupon(code);
       if (res.data.success) {
-        setDiscount(res.data.data.discountAmount || 0);
-        toast.success(res.data.data.message || "Áp dụng mã giảm giá");
+        const data = res.data.data;
+        setCouponCode(code);
+        setAppliedCouponCode(data.couponCode || code);
+        setDiscount(data.discountAmount || 0);
+        toast.success(data.message || "Áp dụng mã giảm giá thành công");
       }
     } catch (err: unknown) {
       const msg =
@@ -235,7 +251,16 @@ const CheckoutPage = () => {
           ?.message || "Mã không hợp lệ";
       toast.error(msg);
       setDiscount(0);
+      setAppliedCouponCode("");
+    } finally {
+      setCouponApplying(false);
     }
+  };
+
+  const clearCoupon = () => {
+    setCouponCode("");
+    setAppliedCouponCode("");
+    setDiscount(0);
   };
 
   const total = Math.max(0, subtotal - discount + shippingFee);
@@ -468,20 +493,70 @@ const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mb-4">
-                    <input
-                      placeholder="Mã giảm giá"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="flex-1 border border-gray-3 rounded-md px-3 py-2"
-                    />
-                    <button
-                      type="button"
-                      onClick={applyCoupon}
-                      className="px-4 py-2 border border-blue text-blue rounded-md hover:bg-blue hover:text-white"
-                    >
-                      Áp dụng
-                    </button>
+                  <div className="mb-4 space-y-3">
+                    <p className="text-sm font-medium text-dark">Mã giảm giá</p>
+                    <div className="flex gap-2">
+                      <input
+                        placeholder="Nhập mã giảm giá"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void applyCoupon();
+                          }
+                        }}
+                        className="flex-1 border border-gray-3 rounded-md px-3 py-2 text-sm uppercase"
+                      />
+                      <button
+                        type="button"
+                        disabled={couponApplying}
+                        onClick={() => void applyCoupon()}
+                        className="px-4 py-2 border border-blue text-blue rounded-md hover:bg-blue hover:text-white disabled:opacity-50 text-sm"
+                      >
+                        {couponApplying ? "..." : "Áp dụng"}
+                      </button>
+                    </div>
+                    {appliedCouponCode && (
+                      <div className="flex items-center justify-between text-sm bg-green-light-6 text-green px-3 py-2 rounded-md">
+                        <span>
+                          Đã áp dụng <strong>{appliedCouponCode}</strong> — giảm{" "}
+                          {formatVnd(discount)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearCoupon}
+                          className="text-xs underline"
+                        >
+                          Gỡ mã
+                        </button>
+                      </div>
+                    )}
+                    {availableCoupons.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-500">Mã khả dụng — bấm để áp dụng:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {availableCoupons.slice(0, 6).map((c) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => void applyCoupon(c.code)}
+                              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                                appliedCouponCode === c.code
+                                  ? "border-green bg-green-light-6 text-green"
+                                  : "border-gray-3 text-[#6C6F93] hover:border-blue hover:text-blue"
+                              }`}
+                              title={c.description || formatCouponLabel(c)}
+                            >
+                              {c.code}
+                              {c.discountType?.toUpperCase() === "PERCENT"
+                                ? ` -${c.discountValue}%`
+                                : ` -${Number(c.discountValue).toLocaleString("vi-VN")}₫`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2 mb-6">

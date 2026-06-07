@@ -54,8 +54,8 @@ export default function ProductFilters() {
           >
             <option value="">Tất cả</option>
             {manufacturers.map((m) => (
-              <option key={m} value={m}>
-                {m}
+              <option key={m.value} value={m.value}>
+                {m.label}
               </option>
             ))}
           </select>

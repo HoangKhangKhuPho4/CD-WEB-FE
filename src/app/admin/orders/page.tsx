@@ -4,7 +4,6 @@ import { useState } from "react";
 import OrderStatsCards from "@/components/Admin/Orders/OrderStatsCards";
 import OrderFilters from "@/components/Admin/Orders/OrderFilters";
 import OrderTable from "@/components/Admin/Orders/OrderTable";
-import OrderPagination from "@/components/Admin/Orders/OrderPagination";
 import OrderDetailModal from "@/components/Admin/Orders/OrderDetailModal";
 import PageHeader from "@/components/Admin/shared/PageHeader";
 import { OrdersAdminProvider } from "@/components/Admin/Orders/ordersAdminStore";
@@ -19,7 +18,6 @@ export default function AdminOrdersPage() {
         <OrderStatsCards />
         <OrderFilters />
         <OrderTable onView={setDetailId} />
-        <OrderPagination />
         <OrderDetailModal
           open={detailId != null}
           onClose={() => setDetailId(null)}

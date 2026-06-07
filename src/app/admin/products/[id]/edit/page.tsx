@@ -9,7 +9,7 @@ export default function AdminEditProductPage({
   params: { id: string };
 }) {
   return (
-    <ProductsProvider>
+    <ProductsProvider variant="form">
       <ProductForm mode="edit" productId={params.id} />
     </ProductsProvider>
   );

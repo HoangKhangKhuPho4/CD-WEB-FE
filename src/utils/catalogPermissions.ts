@@ -16,6 +16,10 @@ export function canManageCoupons(user: RbacUser | null | undefined): boolean {
   return hasPermission(user, "PRODUCT_MANAGE");
 }
 
+export function canManageProducers(user: RbacUser | null | undefined): boolean {
+  return hasAnyPermission(user, ["PRODUCT_MANAGE", "PRODUCT_CREATE", "PRODUCT_UPDATE"]);
+}
+
 export function canStockImport(user: RbacUser | null | undefined): boolean {
   return hasAnyPermission(user, ["STOCK_IMPORT", "ROLE_ADMIN"]);
 }

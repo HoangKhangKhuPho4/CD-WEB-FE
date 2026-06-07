@@ -37,7 +37,7 @@ export function canUpdateOrderStatus(user: RbacUser | null | undefined): boolean
   );
 }
 
-/** Trạng thái tiếp theo — khớp electro-store (ORDER_CONFIRM / ASSIGN_SHIPPING / TRACKING_UPDATE). */
+/** Trạng thái tiếp theo — PENDING→…→DELIVERED→COMPLETED (+ CANCELLED). */
 export function allowedNextStatuses(
   current: string,
   user: RbacUser | null | undefined
@@ -48,11 +48,14 @@ export function allowedNextStatuses(
   if (cur === "PENDING" && canConfirmOrder(user)) {
     options.push("CONFIRMED");
   }
-  if (cur === "CONFIRMED" && canAssignShipping(user)) {
+  if ((cur === "CONFIRMED" || cur === "PROCESSING") && canAssignShipping(user)) {
     options.push("SHIPPING");
   }
   if (cur === "SHIPPING" && canUpdateTracking(user)) {
     options.push("DELIVERED");
+  }
+  if (cur === "DELIVERED" && canUpdateTracking(user)) {
+    options.push("COMPLETED");
   }
   if (canCancelOrder(user) && cur !== "CANCELLED" && cur !== "DELIVERED") {
     options.push("CANCELLED");

@@ -85,18 +85,61 @@ export interface PaymentMethodStats {
   }[];
 }
 
+export interface ConversionRateStat {
+  productId?: number;
+  productName?: string;
+  viewCount?: number;
+  purchaseCount?: number;
+  conversionRate?: number;
+}
+
+export interface ConversionRateStats {
+  productRates: ConversionRateStat[];
+}
+
+export type StatsDateParams = { fromDate?: string; toDate?: string };
+
 const stats = {
-  overview: () => api.get<OverviewStatistics>("/admin/statistics/overview"),
-  staffOverview: () =>
-    api.get<StaffOverviewStatistics>("/admin/statistics/staff-overview"),
-  revenueChart: (period = "month") =>
-    api.get<RevenueChartData>("/admin/statistics/revenue/chart", { params: { period } }),
-  orderStatus: () => api.get<OrderStatusStats>("/admin/statistics/orders/by-status"),
-  topProducts: (type: "best-selling" | "low-stock", limit = 10) =>
-    api.get<TopProductStats>("/admin/statistics/top-products", { params: { type, limit } }),
-  recentOrders: (limit = 10) =>
-    api.get<RecentOrdersData>("/admin/statistics/orders/recent", { params: { limit } }),
-  paymentMethods: () => api.get<PaymentMethodStats>("/admin/statistics/payment-methods"),
+  overview: (params?: StatsDateParams) =>
+    api.get<OverviewStatistics>("/admin/statistics/overview", { params }),
+  staffOverview: (params?: StatsDateParams) =>
+    api.get<StaffOverviewStatistics>("/admin/statistics/staff-overview", { params }),
+  revenueChart: (
+    period = "month",
+    params?: { startDate?: string; endDate?: string }
+  ) =>
+    api.get<RevenueChartData>("/admin/statistics/revenue/chart", {
+      params: { period, ...params },
+    }),
+  orderStatus: (params?: StatsDateParams) =>
+    api.get<OrderStatusStats>("/admin/statistics/orders/by-status", { params }),
+  topProducts: (
+    type: "best-selling" | "low-stock",
+    limit = 10,
+    params?: StatsDateParams
+  ) =>
+    api.get<TopProductStats>("/admin/statistics/top-products", {
+      params: { type, limit, ...params },
+    }),
+  recentOrders: (limit = 10, params?: StatsDateParams) =>
+    api.get<RecentOrdersData>("/admin/statistics/orders/recent", {
+      params: { limit, ...params },
+    }),
+  paymentMethods: (params?: StatsDateParams) =>
+    api.get<PaymentMethodStats>("/admin/statistics/payment-methods", { params }),
+  exportRevenueCsv: (params?: {
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+  }) =>
+    api.get<Blob>("/admin/statistics/revenue/export", {
+      params,
+      responseType: "blob",
+    }),
+  conversionRate: () =>
+    api.get<ConversionRateStats>("/admin/statistics/conversion-rate"),
+  customerSegments: () =>
+    api.get<CustomerSegmentStats>("/admin/statistics/customer-segments"),
 };
 
 // ─── System config ───────────────────────────────────────────────────────
@@ -230,10 +273,44 @@ export interface CategoryItem {
 export interface ProducerItem {
   id: number;
   name: string;
+  code: string;
   description?: string;
   logoUrl?: string;
+  country?: string;
+  website?: string;
   isActive?: boolean;
+  productCount?: number;
+  activeProductCount?: number;
+  createdAt?: string;
 }
+
+export interface ProducerStats {
+  total: number;
+  active: number;
+  inactive: number;
+  withProducts: number;
+  withoutProducts: number;
+  totalLinkedProducts: number;
+}
+
+export interface ProducerProductSummary {
+  id: number;
+  name: string;
+  isActive?: boolean;
+  basePrice?: number;
+}
+
+export type ProducerCreatePayload = {
+  name: string;
+  code: string;
+  logoUrl?: string;
+  description?: string;
+  country?: string;
+  website?: string;
+  isActive?: boolean;
+};
+
+export type ProducerUpdatePayload = Partial<ProducerCreatePayload>;
 
 export const adminCategoryApi = {
   listAll: () => api.get<ApiResponse<CategoryItem[]>>("/admin/categories/all"),
@@ -249,19 +326,49 @@ export const adminCategoryApi = {
 };
 
 export const adminProducerApi = {
-  list: (params?: { page?: number; size?: number; keyword?: string }) =>
-    api.get<ApiResponse<PageResponse<ProducerItem>>>("/admin/producers", { params }),
-  listAll: () => api.get<ApiResponse<ProducerItem[]>>("/admin/producers/all"),
-  create: (body: { name: string; description?: string }) =>
+  list: (params?: {
+    page?: number;
+    size?: number;
+    keyword?: string;
+    isActive?: boolean;
+    country?: string;
+    hasProducts?: boolean;
+    sortBy?: string;
+    sortDir?: string;
+  }) => api.get<ApiResponse<PageResponse<ProducerItem>>>("/admin/producers", { params }),
+  stats: () => api.get<ApiResponse<ProducerStats>>("/admin/producers/stats"),
+  get: (id: number) => api.get<ApiResponse<ProducerItem>>(`/admin/producers/${id}`),
+  getByCode: (code: string) =>
+    api.get<ApiResponse<ProducerItem>>(`/admin/producers/code/${encodeURIComponent(code)}`),
+  getProducts: (id: number, params?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<PageResponse<ProducerProductSummary>>>(
+      `/admin/producers/${id}/products`,
+      { params }
+    ),
+  listAll: (isActive?: boolean) =>
+    api.get<ApiResponse<ProducerItem[]>>("/admin/producers/all", {
+      params: isActive !== undefined ? { isActive } : undefined,
+    }),
+  create: (body: ProducerCreatePayload) =>
     api.post<ApiResponse<ProducerItem>>("/admin/producers", body),
-  update: (id: number, body: Partial<{ name: string; description?: string }>) =>
+  update: (id: number, body: ProducerUpdatePayload) =>
     api.put<ApiResponse<ProducerItem>>(`/admin/producers/${id}`, body),
+  validateCode: (body: { code: string; excludeId?: number }) =>
+    api.post<ApiResponse<{ available: boolean; code: string; message?: string }>>(
+      "/admin/producers/validate-code",
+      body
+    ),
+  bulkStatus: (ids: number[], isActive: boolean) =>
+    api.patch<ApiResponse<ProducerItem[]>>("/admin/producers/bulk-status", { ids, isActive }),
   remove: (id: number) => api.delete<ApiResponse<void>>(`/admin/producers/${id}`),
+  hardRemove: (id: number) => api.delete<ApiResponse<void>>(`/admin/producers/${id}/hard`),
   toggle: (id: number) =>
     api.patch<ApiResponse<ProducerItem>>(`/admin/producers/${id}/toggle-status`),
 };
 
 // ─── Users ───────────────────────────────────────────────────────────────
+
+export const CUSTOMER_ROLE_ID = 4;
 
 export interface AdminUser {
   id: number;
@@ -270,30 +377,68 @@ export interface AdminUser {
   fullName?: string;
   name?: string;
   phone?: string;
+  birth?: string;
+  gender?: string;
+  address?: string;
+  provider?: string;
+  avatarUrl?: string;
   enabled?: boolean;
   createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string;
   roles?: { id: number; name: string }[];
+  permissions?: string[];
+}
+
+export interface CustomerSegmentStats {
+  segments: {
+    productTypeId?: number;
+    categoryName?: string;
+    segmentLabel?: string;
+    userCount?: number;
+    percentage?: number;
+    color?: string;
+  }[];
 }
 
 export const adminCustomerApi = {
-  list: (params?: { page?: number; size?: number; keyword?: string }) =>
-    api.get<ApiResponse<PageResponse<AdminUser>>>("/admin/customers", { params }),
+  list: (params?: {
+    page?: number;
+    size?: number;
+    keyword?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }) => api.get<ApiResponse<PageResponse<AdminUser>>>("/admin/customers", { params }),
 };
 
 export const adminUserApi = {
-  list: (params?: { page?: number; size?: number; keyword?: string }) =>
-    api.get<ApiResponse<PageResponse<AdminUser>>>("/admin/users", { params }),
+  list: (params?: {
+    page?: number;
+    size?: number;
+    keyword?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }) => api.get<ApiResponse<PageResponse<AdminUser>>>("/admin/users", { params }),
+  get: (id: number) => api.get<ApiResponse<AdminUser>>(`/admin/users/${id}`),
   create: (body: {
     username: string;
     email: string;
     password: string;
     fullName: string;
     phone?: string;
+    gender?: string;
+    birth?: string;
     roleId?: number;
   }) => api.post<ApiResponse<AdminUser>>("/admin/users", body),
   update: (
     id: number,
-    body: Partial<{ fullName: string; phone?: string; address?: string }>
+    body: Partial<{
+      fullName: string;
+      phone?: string;
+      address?: string;
+      gender?: string;
+      birth?: string;
+    }>
   ) => api.put<ApiResponse<AdminUser>>(`/admin/users/${id}`, body),
   toggleStatus: (id: number) =>
     api.put<ApiResponse<AdminUser>>(`/admin/users/${id}/status`),
@@ -304,22 +449,55 @@ export const adminUserApi = {
 
 export interface AdminReview {
   id: number;
+  productId?: number;
   productName?: string;
+  title?: string;
   user?: { id?: number; username?: string; name?: string };
   rating?: number;
   content?: string;
+  pros?: string;
+  cons?: string;
   replyContent?: string;
   isApproved?: boolean | null;
+  isVerifiedPurchase?: boolean;
+  helpfulCount?: number;
+  images?: string[];
   createdAt?: string;
 }
 
+export interface AdminReviewStats {
+  total: number;
+  pending: number;
+  approved: number;
+  hidden: number;
+  verifiedCount: number;
+  unrepliedCount: number;
+  averageRating: number;
+  ratingDistribution?: Record<number, number>;
+}
+
 export const adminReviewApi = {
-  list: (params?: { page?: number; size?: number }) =>
-    api.get<ApiResponse<PageResponse<AdminReview>>>("/admin/reviews", { params }),
+  list: (params?: {
+    page?: number;
+    size?: number;
+    isApproved?: boolean;
+    rating?: number;
+    productId?: number;
+    keyword?: string;
+    verifiedOnly?: boolean;
+    hasReply?: boolean;
+  }) => api.get<ApiResponse<PageResponse<AdminReview>>>("/admin/reviews", { params }),
+  stats: () => api.get<ApiResponse<AdminReviewStats>>("/admin/reviews/stats"),
+  get: (id: number) => api.get<ApiResponse<AdminReview>>(`/admin/reviews/${id}`),
   updateStatus: (id: number, isApproved: boolean) =>
     api.put<ApiResponse<AdminReview>>(`/admin/reviews/${id}/status`, { isApproved }),
+  bulkStatus: (ids: number[], isApproved: boolean) =>
+    api.patch<ApiResponse<AdminReview[]>>("/admin/reviews/bulk-status", { ids, isApproved }),
   reply: (id: number, replyContent: string) =>
     api.post<ApiResponse<AdminReview>>(`/admin/reviews/${id}/reply`, { replyContent }),
+  updateReply: (id: number, replyContent: string) =>
+    api.put<ApiResponse<AdminReview>>(`/admin/reviews/${id}/reply`, { replyContent }),
+  deleteReply: (id: number) => api.delete<ApiResponse<AdminReview>>(`/admin/reviews/${id}/reply`),
   remove: (id: number) => api.delete<ApiResponse<void>>(`/admin/reviews/${id}`),
 };
 
@@ -327,12 +505,16 @@ export const adminReviewApi = {
 
 export interface InventoryStatRow {
   variantId: number;
-  productName: string;
+  productName?: string;
   variantName?: string;
   skuCode?: string;
-  currentStock: number;
+  stockQuantity: number;
   lowStockThreshold?: number;
+  unitPrice?: number;
+  stockValue?: number;
   status?: string;
+  /** @deprecated dùng stockQuantity */
+  currentStock?: number;
 }
 
 export interface InventoryTransaction {
@@ -370,20 +552,99 @@ export interface VariantSearchHit {
   productName?: string;
 }
 
+export type InventoryTransactionType =
+  | "IMPORT"
+  | "EXPORT"
+  | "ADJUSTMENT"
+  | "RETURN"
+  | "TRANSFER";
+
+export interface ValidateImportItemResult {
+  variantId?: number;
+  skuCode?: string;
+  productName?: string;
+  variantName?: string;
+  currentStock?: number;
+  requestedQuantity?: number;
+  valid: boolean;
+  message?: string;
+}
+
+export interface ValidateImportResponse {
+  allValid: boolean;
+  results: ValidateImportItemResult[];
+}
+
+export interface InventoryTransactionQuery {
+  variantId?: number;
+  transactionType?: InventoryTransactionType;
+  referenceType?: string;
+  referenceId?: number;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: string;
+}
+
 export const adminInventoryApi = {
   stats: (lowStockThreshold = 10) =>
     api.get<ApiResponse<InventoryStatRow[]>>("/admin/inventory/stats", {
       params: { lowStockThreshold },
     }),
+
+  exportStatsCsv: (lowStockThreshold = 10) =>
+    api.get<Blob>("/admin/inventory/stats/export", {
+      params: { lowStockThreshold },
+      responseType: "blob",
+    }),
+
+  validateImport: (body: {
+    items: { variantId: number; quantity: number }[];
+    supplier?: string;
+    note?: string;
+  }) =>
+    api.post<ApiResponse<ValidateImportResponse>>("/admin/inventory/import/validate", body),
+
   importStock: (body: {
     items: { variantId: number; quantity: number }[];
     supplier?: string;
     note?: string;
   }) => api.post<ApiResponse<string>>("/admin/inventory/import", body),
+
+  adjustStock: (body: {
+    variantId: number;
+    quantity: number;
+    direction: "INCREASE" | "DECREASE";
+    reason?: string;
+  }) => api.post<ApiResponse<string>>("/admin/inventory/adjust", body),
+
   returnStock: (body: { imei: string; reason?: string; isDefective?: boolean }) =>
     api.post<ApiResponse<string>>("/admin/inventory/return", body),
-  transactions: () =>
-    api.get<ApiResponse<InventoryTransaction[]>>("/admin/inventory/transactions"),
+
+  returnQuantity: (body: {
+    variantId: number;
+    quantity: number;
+    reason?: string;
+    isDefective?: boolean;
+  }) => api.post<ApiResponse<string>>("/admin/inventory/return-quantity", body),
+
+  transactions: (params?: InventoryTransactionQuery) =>
+    api.get<ApiResponse<PageResponse<InventoryTransaction> | InventoryTransaction[]>>(
+      "/admin/inventory/transactions",
+      { params }
+    ),
+
+  getTransaction: (id: number) =>
+    api.get<ApiResponse<InventoryTransaction>>(`/admin/inventory/transactions/${id}`),
+
+  exportTransactionsCsv: (params?: Omit<InventoryTransactionQuery, "page" | "size" | "sortBy" | "sortDir">) =>
+    api.get<Blob>("/admin/inventory/transactions/export", {
+      params,
+      responseType: "blob",
+    }),
+
   searchVariants: (q: string) =>
     api.get<ApiResponse<VariantSearchHit[]>>("/admin/inventory/variants/search", {
       params: { q },
@@ -407,7 +668,209 @@ export const adminInventoryApi = {
     }),
 };
 
+// ─── IMEI / Serial (adminImeiApi) ─────────────────────────────────────────
+
+export type ImeiDeviceStatus =
+  | "AVAILABLE"
+  | "RESERVED"
+  | "SOLD"
+  | "IN_REPAIR"
+  | "DEFECTIVE"
+  | "RETURNED";
+
+export interface ImeiStats {
+  total: number;
+  available: number;
+  reserved: number;
+  sold: number;
+  inRepair: number;
+  defective: number;
+  returned: number;
+  linkedToOrders: number;
+}
+
+export interface ImeiListItem {
+  id: number;
+  imei?: string;
+  serialNumber?: string;
+  imei2?: string;
+  productName: string;
+  variantName?: string;
+  skuCode?: string;
+  variantId?: number;
+  status: ImeiDeviceStatus | string;
+  condition?: string;
+  orderCode?: string;
+  orderId?: number;
+  batchNumber?: string;
+  location?: string;
+  createdAt?: string;
+  warrantyStartDate?: string;
+  warrantyMonths?: number;
+}
+
+export interface ImeiOrderLink {
+  orderId?: number;
+  orderCode?: string;
+  orderStatus?: string;
+  orderDetailId?: number;
+  quantity?: number;
+}
+
+export interface ImeiWarrantyInfo {
+  startDate?: string;
+  months?: number;
+  active?: boolean;
+  message?: string;
+}
+
+export interface ImeiTransactionItem {
+  id: number;
+  transactionType: string;
+  quantity: number;
+  reason?: string;
+  createdAt?: string;
+}
+
+export interface ImeiDetail extends ImeiListItem {
+  macAddress?: string;
+  notes?: string;
+  productId?: number;
+  manufactureDate?: string;
+  updatedAt?: string;
+  soldAt?: string;
+  order?: ImeiOrderLink;
+  warranty?: ImeiWarrantyInfo;
+  transactions?: ImeiTransactionItem[];
+}
+
+export interface ImeiValidateItemResult {
+  imei: string;
+  valid: boolean;
+  message: string;
+}
+
+export interface ImeiValidateResponse {
+  allValid: boolean;
+  results: ImeiValidateItemResult[];
+}
+
+export interface ImeiImportResult {
+  importedCount: number;
+  skippedCount: number;
+  errors: string[];
+}
+
+export interface ImeiBulkStatusResult {
+  successCount: number;
+  failCount: number;
+  errors: string[];
+}
+
+export interface ImeiReleaseResponse {
+  productItemId: number;
+  imei?: string;
+  previousStatus?: string;
+  newStatus?: string;
+  orderCode?: string;
+  message?: string;
+}
+
+export const adminImeiApi = {
+  stats: () => api.get<ApiResponse<ImeiStats>>("/admin/imei/stats"),
+
+  list: (params?: {
+    keyword?: string;
+    status?: string;
+    variantId?: number;
+    orderCode?: string;
+    fromDate?: string;
+    toDate?: string;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    sortDir?: string;
+  }) => api.get<ApiResponse<PageResponse<ImeiListItem>>>("/admin/imei", { params }),
+
+  get: (id: number) => api.get<ApiResponse<ImeiDetail>>(`/admin/imei/${id}`),
+
+  lookup: (code: string) =>
+    api.get<ApiResponse<ImeiDetail>>(`/admin/imei/lookup/${encodeURIComponent(code)}`),
+
+  validate: (body: { variantId?: number; imeis: string[]; excludeId?: number }) =>
+    api.post<ApiResponse<ImeiValidateResponse>>("/admin/imei/validate", body),
+
+  create: (body: {
+    variantId: number;
+    imeis: string[];
+    batchNumber?: string;
+    note?: string;
+    imei2?: string;
+    macAddress?: string;
+  }) => api.post<ApiResponse<void>>("/admin/imei", body),
+
+  uploadExcel: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<ApiResponse<ImeiImportResult>>("/admin/imei/upload-excel", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  update: (
+    id: number,
+    body: {
+      imei2?: string;
+      macAddress?: string;
+      batchNumber?: string;
+      location?: string;
+      notes?: string;
+      condition?: string;
+    }
+  ) => api.patch<ApiResponse<ImeiListItem>>(`/admin/imei/${id}`, body),
+
+  updateStatus: (
+    id: number,
+    body: { status: string; reason?: string; force?: boolean }
+  ) => api.put<ApiResponse<ImeiListItem>>(`/admin/imei/${id}/status`, body),
+
+  bulkStatus: (body: {
+    ids: number[];
+    status: string;
+    reason?: string;
+    force?: boolean;
+  }) => api.patch<ApiResponse<ImeiBulkStatusResult>>("/admin/imei/bulk-status", body),
+
+  release: (id: number) =>
+    api.post<ApiResponse<ImeiReleaseResponse>>(`/admin/imei/${id}/release`),
+
+  returnStock: (body: { imei: string; reason?: string; isDefective?: boolean }) =>
+    api.post<ApiResponse<void>>("/admin/imei/return", body),
+
+  exportCsv: (params?: {
+    keyword?: string;
+    status?: string;
+    variantId?: number;
+    orderCode?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    api.get<Blob>("/admin/imei/export", {
+      params,
+      responseType: "blob",
+    }),
+};
+
 // ─── Coupons ─────────────────────────────────────────────────────────────
+
+export type CouponLifecycleStatus =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "EXPIRED"
+  | "UPCOMING"
+  | "EXHAUSTED";
+
+export type CouponScopeType = "ALL" | "PRODUCTS" | "PRODUCT_TYPES";
 
 export interface AdminCoupon {
   id: number;
@@ -420,31 +883,106 @@ export interface AdminCoupon {
   maxDiscountAmount?: number;
   usageLimit?: number;
   usedCount?: number;
+  perUserLimit?: number;
+  firstOrderOnly?: boolean;
+  scopeType?: CouponScopeType;
+  productIds?: number[];
+  productTypeIds?: number[];
   dateStart: string;
   dateEnd: string;
   isActive?: boolean;
+  lifecycleStatus?: CouponLifecycleStatus;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
+export interface AdminCouponStats {
+  total: number;
+  active: number;
+  inactive: number;
+  expired: number;
+  upcoming: number;
+  exhausted: number;
+  totalUsedCount: number;
+  firstOrderOnlyCount: number;
+}
+
+export interface CouponValidateResponse {
+  valid: boolean;
+  code?: string;
+  message?: string;
+  discountType?: string;
+  discountValue?: number;
+  discountAmount?: number;
+  originalSubtotal?: number;
+  finalAmount?: number;
+}
+
+export interface CouponUsageOrder {
+  orderId: number;
+  orderCode: string;
+  customerName?: string;
+  customerUsername?: string;
+  discountAmount?: number;
+  totalAmount?: number;
+  orderStatus?: string;
+  orderDate?: string;
+}
+
+export type CouponCreatePayload = {
+  code: string;
+  name?: string;
+  description?: string;
+  discountType: string;
+  discountValue: number;
+  minOrderValue?: number;
+  maxDiscountAmount?: number;
+  usageLimit?: number;
+  perUserLimit?: number;
+  firstOrderOnly?: boolean;
+  scopeType?: CouponScopeType;
+  productIds?: number[];
+  productTypeIds?: number[];
+  dateStart: string;
+  dateEnd: string;
+  isActive?: boolean;
+};
+
 export const adminCouponApi = {
-  list: (params?: { page?: number; size?: number; keyword?: string; isActive?: boolean }) =>
-    api.get<ApiResponse<PageResponse<AdminCoupon>>>("/admin/coupons", { params }),
-  create: (body: {
-    code: string;
-    name?: string;
-    description?: string;
-    discountType: string;
-    discountValue: number;
-    minOrderValue?: number;
-    maxDiscountAmount?: number;
-    usageLimit?: number;
-    dateStart: string;
-    dateEnd: string;
+  list: (params?: {
+    page?: number;
+    size?: number;
+    keyword?: string;
     isActive?: boolean;
-  }) => api.post<ApiResponse<AdminCoupon>>("/admin/coupons", body),
-  update: (id: number, body: Partial<AdminCoupon>) =>
+    discountType?: string;
+    lifecycle?: string;
+    sortBy?: string;
+    sortDir?: string;
+  }) => api.get<ApiResponse<PageResponse<AdminCoupon>>>("/admin/coupons", { params }),
+  stats: () => api.get<ApiResponse<AdminCouponStats>>("/admin/coupons/stats"),
+  get: (id: number) => api.get<ApiResponse<AdminCoupon>>(`/admin/coupons/${id}`),
+  getByCode: (code: string) =>
+    api.get<ApiResponse<AdminCoupon>>(`/admin/coupons/code/${encodeURIComponent(code)}`),
+  getUsageOrders: (id: number, params?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<PageResponse<CouponUsageOrder>>>(`/admin/coupons/${id}/orders`, {
+      params,
+    }),
+  create: (body: CouponCreatePayload) =>
+    api.post<ApiResponse<AdminCoupon>>("/admin/coupons", body),
+  update: (id: number, body: Partial<CouponCreatePayload>) =>
     api.put<ApiResponse<AdminCoupon>>(`/admin/coupons/${id}`, body),
   toggle: (id: number) => api.patch<ApiResponse<AdminCoupon>>(`/admin/coupons/${id}/toggle`),
+  bulkStatus: (ids: number[], isActive: boolean) =>
+    api.patch<ApiResponse<AdminCoupon[]>>("/admin/coupons/bulk-status", { ids, isActive }),
+  validate: (body: {
+    code: string;
+    subtotal?: number;
+    userId?: number;
+    items?: { productId?: number; productTypeId?: number; lineTotal?: number }[];
+  }) => api.post<ApiResponse<CouponValidateResponse>>("/admin/coupons/validate", body),
   remove: (id: number) => api.delete<ApiResponse<void>>(`/admin/coupons/${id}`),
+  hardRemove: (id: number) => api.delete<ApiResponse<void>>(`/admin/coupons/${id}/hard`),
+  listActive: () => api.get<ApiResponse<AdminCoupon[]>>("/admin/coupons/active"),
 };
 
 // ─── Attributes ──────────────────────────────────────────────────────────
@@ -495,23 +1033,117 @@ export interface WarrantyTicket {
   repairCost?: number;
   receivedAt?: string;
   resolvedAt?: string;
+  returnedAt?: string;
+  createdBy?: string;
+}
+
+export interface WarrantyStatsResponse {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+  returned: number;
+}
+
+export interface WarrantyValidateResponse {
+  valid: boolean;
+  message?: string;
+  deviceFound?: boolean;
+  warrantyValid?: boolean;
+  hasActiveTicket?: boolean;
+  activeTicketCode?: string;
+  warranty?: {
+    productName?: string;
+    variantName?: string;
+    imei?: string;
+    isValid?: boolean;
+    message?: string;
+    warrantyEndDate?: string;
+    status?: string;
+  };
+}
+
+export interface WarrantyLookupAdmin {
+  found: boolean;
+  message: string;
+  warranty?: {
+    productName?: string;
+    variantName?: string;
+    imei?: string;
+    serialNumber?: string;
+    isValid?: boolean;
+    message?: string;
+    warrantyStartDate?: string;
+    warrantyEndDate?: string;
+    status?: string;
+  };
+  purchase?: {
+    orderCode?: string;
+    orderDate?: string;
+    orderStatusDisplay?: string;
+  } | null;
+  repairTickets?: {
+    ticketCode?: string;
+    status?: string;
+    statusDisplay?: string;
+    receivedAt?: string;
+  }[];
 }
 
 export const adminWarrantyApi = {
-  list: (params?: { page?: number; size?: number; keyword?: string; status?: string }) =>
-    api.get<ApiResponse<PageResponse<WarrantyTicket>>>("/admin/warranty/tickets", { params }),
+  stats: () => api.get<ApiResponse<WarrantyStatsResponse>>("/admin/warranty/stats"),
+
+  lookup: (code: string) =>
+    api.get<ApiResponse<WarrantyLookupAdmin>>(`/admin/warranty/lookup/${encodeURIComponent(code)}`),
+
+  validate: (body: {
+    imeiOrSerial: string;
+    customerName: string;
+    customerPhone: string;
+    issueDescription: string;
+  }) => api.post<ApiResponse<WarrantyValidateResponse>>("/admin/warranty/tickets/validate", body),
+
+  list: (params?: {
+    page?: number;
+    size?: number;
+    keyword?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => api.get<ApiResponse<PageResponse<WarrantyTicket>>>("/admin/warranty/tickets", { params }),
+
+  exportCsv: (params?: {
+    keyword?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    api.get<Blob>("/admin/warranty/tickets/export", {
+      params,
+      responseType: "blob",
+    }),
+
   get: (id: number) =>
     api.get<ApiResponse<WarrantyTicket>>(`/admin/warranty/tickets/${id}`),
+
+  getByCode: (ticketCode: string) =>
+    api.get<ApiResponse<WarrantyTicket>>(
+      `/admin/warranty/tickets/by-code/${encodeURIComponent(ticketCode)}`
+    ),
+
   create: (body: {
     imeiOrSerial: string;
     customerName: string;
     customerPhone: string;
     issueDescription: string;
   }) => api.post<ApiResponse<WarrantyTicket>>("/admin/warranty/tickets", body),
+
   updateStatus: (
     id: number,
     body: { status: string; technicianNote?: string; repairCost?: number }
   ) => api.put<ApiResponse<WarrantyTicket>>(`/admin/warranty/tickets/${id}/status`, body),
+
   updateDeviceStatus: (code: string, status: string) =>
     api.put<ApiResponse<unknown>>(`/admin/warranty/${encodeURIComponent(code)}/status`, null, {
       params: { status },

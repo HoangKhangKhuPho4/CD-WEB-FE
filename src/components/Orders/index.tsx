@@ -17,6 +17,9 @@ import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import GhnTrackingPanel from "./GhnTrackingPanel";
+import OrdersPagination from "./OrdersPagination";
+
+const DEFAULT_PAGE_SIZE = 5;
 
 // --- Types ---
 type OrderSummary = {
@@ -616,6 +619,7 @@ const Orders = () => {
   const [loading, setLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedOrderCode, setSelectedOrderCode] = useState("");
@@ -625,31 +629,33 @@ const Orders = () => {
   const isStaff = hasStaffRole(user);
 
   const fetchOrders = useCallback(
-    async (page: number = 0, status: string = "") => {
+    async (page: number = 0, status: string = "", size: number = pageSize) => {
       if (!isAuthenticated || !canViewCustomerOrders) return;
       setLoading(true);
       try {
-        const data = await getOrdersApi(page, 10, status || undefined);
-        if (data.success) {
-          setOrders(data.data.content || []);
-          setTotalPages(data.data.totalPages || 0);
-          setTotalElements(data.data.totalElements || 0);
-          setCurrentPage(data.data.pageable?.pageNumber || 0);
+        const data = await getOrdersApi(page, size, status || undefined);
+        if (data.success && data.data) {
+          const pageData = data.data;
+          setOrders(pageData.content || []);
+          setTotalPages(pageData.totalPages ?? 0);
+          setTotalElements(pageData.totalElements ?? 0);
+          setCurrentPage(pageData.number ?? pageData.pageable?.pageNumber ?? page);
         }
       } catch (err) {
         console.error("Fetch orders error:", err);
+        toast.error("Không thể tải danh sách đơn hàng");
       } finally {
         setLoading(false);
       }
     },
-    [isAuthenticated, canViewCustomerOrders]
+    [isAuthenticated, canViewCustomerOrders, pageSize]
   );
 
   useEffect(() => {
     if (canViewCustomerOrders) {
-      fetchOrders(0, activeStatus);
+      fetchOrders(0, activeStatus, pageSize);
     }
-  }, [fetchOrders, activeStatus, canViewCustomerOrders]);
+  }, [fetchOrders, activeStatus, canViewCustomerOrders, pageSize]);
 
   const handleTabChange = (status: string) => {
     setActiveStatus(status);
@@ -658,7 +664,15 @@ const Orders = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchOrders(page, activeStatus);
+    fetchOrders(page, activeStatus, pageSize);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(0);
   };
 
   const handleViewDetail = (orderCode: string) => {
@@ -667,7 +681,7 @@ const Orders = () => {
   };
 
   const handleCancelSuccess = () => {
-    fetchOrders(currentPage, activeStatus);
+    fetchOrders(currentPage, activeStatus, pageSize);
   };
 
   if (!isAuthenticated) {
@@ -868,38 +882,14 @@ const Orders = () => {
             </div>
           ))}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 py-6 border-t border-gray-3">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 0}
-                className="px-3 py-1.5 rounded text-sm border border-gray-3 disabled:opacity-50 disabled:cursor-not-allowed ease-out duration-200 hover:bg-blue hover:text-white hover:border-blue"
-              >
-                ‹
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => handlePageChange(i)}
-                  className={`w-8 h-8 rounded text-sm ease-out duration-200 ${
-                    currentPage === i
-                      ? "bg-blue text-white"
-                      : "border border-gray-3 hover:bg-blue hover:text-white hover:border-blue"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1}
-                className="px-3 py-1.5 rounded text-sm border border-gray-3 disabled:opacity-50 disabled:cursor-not-allowed ease-out duration-200 hover:bg-blue hover:text-white hover:border-blue"
-              >
-                ›
-              </button>
-            </div>
-          )}
+          <OrdersPagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </>
       )}
 

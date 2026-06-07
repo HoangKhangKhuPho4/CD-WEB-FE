@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchProductSuggestions } from "@/utils/productApi";
+import { resolveBackendImageUrl } from "@/utils/productMapper";
 import type { ProductSuggestItem } from "@/types/product-api";
 
 type HeaderSearchFieldProps = {
@@ -148,7 +149,9 @@ export default function HeaderSearchField({
           {!loading && items.length === 0 && (
             <li className="px-4 py-3 text-sm text-[#8D93A5]">Không có gợi ý phù hợp</li>
           )}
-          {items.map((item, idx) => (
+          {items.map((item, idx) => {
+            const thumbUrl = resolveBackendImageUrl(item.imageUrl);
+            return (
             <li key={item.id} role="option" aria-selected={idx === activeIdx}>
               <button
                 type="button"
@@ -159,9 +162,13 @@ export default function HeaderSearchField({
                 }`}
               >
                 <div className="w-10 h-10 rounded-md bg-gray-2 flex-shrink-0 overflow-hidden border border-gray-3">
-                  {item.imageUrl ? (
+                  {thumbUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={thumbUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-[10px] text-[#8D93A5]">
                       SP
@@ -176,7 +183,8 @@ export default function HeaderSearchField({
                 </div>
               </button>
             </li>
-          ))}
+            );
+          })}
           {items.length > 0 && (
             <li className="border-t border-gray-3 mt-1">
               <button

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import RecentlyViewdItems from "./RecentlyViewd";
@@ -23,6 +23,7 @@ import ProductReviewsTab from "./ProductReviewsTab";
 
 const ShopDetails = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams();
   const routeIdRaw = params?.id;
   const routeProductId =
@@ -48,6 +49,12 @@ const ShopDetails = () => {
   const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
   const [activeTab, setActiveTab] = useState("tabOne");
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "reviews") {
+      setActiveTab("tabThree");
+    }
+  }, [searchParams]);
 
   const tabs = [
     {

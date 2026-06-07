@@ -94,11 +94,6 @@ export const warehouseInventoryLinks: NavLink[] = [
 
 export const supportLinks: NavLink[] = [
   { label: "Quản lý phiếu bảo hành", href: "/admin/warranty", permissions: ["WARRANTY_MANAGE"] },
-  {
-    label: "Đánh giá sản phẩm",
-    href: "/admin/reviews",
-    permissions: ["PRODUCT_MANAGE"],
-  },
 ];
 
 /** Sub-nav / sidebar kho & sales — chỉ quản lý phiếu (không gồm đánh giá SP). */
@@ -108,6 +103,11 @@ export const warrantyTicketLinks: NavLink[] = [
 
 export const customerLinks: NavLink[] = [
   { label: "Khách hàng", href: "/admin/customers", permissions: ["USER_MANAGE", "CUSTOMER_VIEW"] },
+  {
+    label: "Quản lý đánh giá",
+    href: "/admin/reviews",
+    permissions: ["REVIEW_MANAGE", "REVIEW_REPLY", "PRODUCT_MANAGE", "WARRANTY_MANAGE"],
+  },
 ];
 
 export const contentLinks: NavLink[] = [

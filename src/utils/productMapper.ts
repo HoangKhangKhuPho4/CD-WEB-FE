@@ -13,11 +13,20 @@ function getApiOrigin(): string {
 }
 
 /**
- * Chuẩn hóa linkImage từ API: URL tuyệt đối, hoặc đường dẫn /img/... → full URL.
+ * Chuẩn hóa linkImage từ API.
+ * URL `/img/{id}` luôn trỏ về NEXT_PUBLIC_API_BASE_URL — tránh ngrok cũ/hết hạn trong JSON.
  */
-function normalizeImageUrl(linkImage: string | null | undefined): string | null {
+export function resolveBackendImageUrl(
+  linkImage: string | null | undefined
+): string | null {
   const u = typeof linkImage === "string" ? linkImage.trim() : "";
   if (!u) return null;
+
+  const imgIdMatch = u.match(/\/img\/(\d+)\/?(?:\?.*)?$/);
+  if (imgIdMatch) {
+    return `${getApiOrigin()}/img/${imgIdMatch[1]}`;
+  }
+
   if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith("//")) {
     try {
@@ -28,6 +37,10 @@ function normalizeImageUrl(linkImage: string | null | undefined): string | null 
   }
   if (u.startsWith("/")) return `${getApiOrigin()}${u}`;
   return null;
+}
+
+function normalizeImageUrl(linkImage: string | null | undefined): string | null {
+  return resolveBackendImageUrl(linkImage);
 }
 
 function collectImageUrls(images: ProductResponse["images"]): string[] {

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Modal from "@/components/Admin/shared/Modal";
 import PrimaryButton from "@/components/Admin/shared/PrimaryButton";
-import { adminCategoryApi, adminProducerApi } from "@/utils/adminApi";
+import ProducerSidebarPanel from "@/components/Admin/Producers/ProducerSidebarPanel";
+import { adminCategoryApi } from "@/utils/adminApi";
 
 interface Category {
   id: string;
@@ -13,13 +14,6 @@ interface Category {
   position: number;
   parent: string;
   active: boolean;
-}
-
-interface Producer {
-  id: string;
-  name: string;
-  productCount: number;
-  enabled: boolean;
 }
 
 function slugify(name: string) {
@@ -34,7 +28,6 @@ function slugify(name: string) {
 
 export default function CategoryManagement() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [producers, setProducers] = useState<Producer[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({
@@ -48,10 +41,7 @@ export default function CategoryManagement() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, pRes] = await Promise.all([
-        adminCategoryApi.listAll(),
-        adminProducerApi.listAll(),
-      ]);
+      const cRes = await adminCategoryApi.listAll();
       if (cRes.data.success) {
         setCategories(
           cRes.data.data.map((c, i) => ({
@@ -64,18 +54,8 @@ export default function CategoryManagement() {
           }))
         );
       }
-      if (pRes.data.success) {
-        setProducers(
-          pRes.data.data.map((p) => ({
-            id: String(p.id),
-            name: p.name,
-            productCount: 0,
-            enabled: p.isActive !== false,
-          }))
-        );
-      }
     } catch {
-      toast.error("Không tải được danh mục / nhà sản xuất");
+      toast.error("Không tải được danh mục");
     } finally {
       setLoading(false);
     }
@@ -112,15 +92,6 @@ export default function CategoryManagement() {
     }
   };
 
-  const toggleProducer = async (id: string) => {
-    try {
-      await adminProducerApi.toggle(Number(id));
-      await load();
-    } catch {
-      toast.error("Không đổi được trạng thái nhà sản xuất");
-    }
-  };
-
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -136,10 +107,18 @@ export default function CategoryManagement() {
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="bg-[#F7F9FC]">
-                    <th className="text-left px-6 py-3 text-xs font-bold text-[#8D93A5] uppercase">Tên danh mục</th>
-                    <th className="text-left px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">Slug</th>
-                    <th className="text-center px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">Vị trí</th>
-                    <th className="text-left px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">Trạng thái</th>
+                    <th className="text-left px-6 py-3 text-xs font-bold text-[#8D93A5] uppercase">
+                      Tên danh mục
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">
+                      Slug
+                    </th>
+                    <th className="text-center px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">
+                      Vị trí
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-bold text-[#8D93A5] uppercase">
+                      Trạng thái
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-3/50">
@@ -152,7 +131,9 @@ export default function CategoryManagement() {
                         <button
                           type="button"
                           onClick={() => void toggleCategory(c.id)}
-                          className={`text-xs px-2 py-1 rounded-full ${c.active ? "bg-green-light-6 text-green" : "bg-red-light-6 text-red"}`}
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            c.active ? "bg-green-light-6 text-green" : "bg-red-light-6 text-red"
+                          }`}
                         >
                           {c.active ? "Kích hoạt" : "Ẩn"}
                         </button>
@@ -165,29 +146,8 @@ export default function CategoryManagement() {
           </div>
         </div>
 
-        <div className="xl:col-span-4 bg-white rounded-xl border border-gray-3/50 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-dark">Nhà sản xuất</h3>
-          </div>
-          <div className="space-y-3">
-            {producers.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-3/50">
-                <div>
-                  <p className="text-sm font-semibold text-dark">{p.name}</p>
-                  <p className="text-xs text-[#8D93A5]">{p.productCount} sản phẩm</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={p.enabled}
-                  onClick={() => void toggleProducer(p.id)}
-                  className={`relative w-10 h-5 rounded-full ${p.enabled ? "bg-[#3C50E0]" : "bg-gray-3"}`}
-                >
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${p.enabled ? "left-5" : "left-0.5"}`} />
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="xl:col-span-4">
+          <ProducerSidebarPanel limit={10} />
         </div>
       </div>
 
@@ -198,7 +158,11 @@ export default function CategoryManagement() {
         subtitle="Điền thông tin chi tiết để thêm danh mục vào hệ thống"
         footer={
           <>
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2.5 text-sm font-semibold text-[#6C6F93] hover:text-dark">
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="px-4 py-2.5 text-sm font-semibold text-[#6C6F93] hover:text-dark"
+            >
               Hủy bỏ
             </button>
             <PrimaryButton onClick={() => void saveCategory()}>Lưu thông tin</PrimaryButton>

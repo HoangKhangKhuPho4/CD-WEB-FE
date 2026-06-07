@@ -33,13 +33,16 @@ type OrdersAdminContextValue = {
   orders: AdminOrderSummary[];
   loading: boolean;
   page: number;
+  pageSize: number;
   totalPages: number;
+  totalElements: number;
   keyword: string;
   statusFilter: string;
   pendingCount: number;
   setKeyword: (v: string) => void;
   setStatusFilter: (v: string) => void;
   setPage: (p: number) => void;
+  setPageSize: (size: number) => void;
   reload: () => void;
   fetchDetail: (id: number) => Promise<OrderDetail | null>;
   updateStatus: (
@@ -85,7 +88,9 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
@@ -95,7 +100,7 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
     try {
       const res = await adminOrderApi.list({
         page,
-        size: 15,
+        size: pageSize,
         keyword: keyword || undefined,
         status: statusFilter || undefined,
         sortBy: "createdAt",
@@ -103,14 +108,15 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
       });
       if (res.data.success) {
         setOrders(res.data.data.content);
-        setTotalPages(res.data.data.totalPages);
+        setTotalPages(Math.max(1, res.data.data.totalPages));
+        setTotalElements(res.data.data.totalElements);
       }
     } catch {
       toast.error("Không tải được danh sách đơn hàng");
     } finally {
       setLoading(false);
     }
-  }, [page, keyword, statusFilter]);
+  }, [page, pageSize, keyword, statusFilter]);
 
   useEffect(() => {
     void load();
@@ -173,13 +179,19 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
         orders,
         loading,
         page,
+        pageSize,
         totalPages,
+        totalElements,
         keyword,
         statusFilter,
         pendingCount,
         setKeyword,
         setStatusFilter,
         setPage,
+        setPageSize: (size: number) => {
+          setPageSize(size);
+          setPage(0);
+        },
         reload: load,
         fetchDetail,
         updateStatus,

@@ -1,6 +1,6 @@
 ﻿import MyAccount from "@/components/MyAccount";
 import ProtectedRoute from "@/components/Auth/ProtectedRoute";
-import React from "react";
+import React, { Suspense } from "react";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
@@ -13,7 +13,9 @@ const MyAccountPage = () => {
   return (
     <ProtectedRoute>
       <main>
-        <MyAccount />
+        <Suspense fallback={<div className="py-20 text-center">Đang tải...</div>}>
+          <MyAccount />
+        </Suspense>
       </main>
     </ProtectedRoute>
   );

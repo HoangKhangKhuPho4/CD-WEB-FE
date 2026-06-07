@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminStatisticsApi } from "@/utils/adminApi";
+import type { AnalyticsDateRange } from "@/utils/analyticsDateRange";
 import { formatDateTime, formatVnd } from "@/utils/adminFormat";
 
 const statusClass: Record<string, string> = {
   PENDING: "bg-yellow-light-4 text-yellow",
+  CONFIRMED: "bg-blue-light-5 text-blue",
   PROCESSING: "bg-blue-light-5 text-blue",
   SHIPPING: "bg-[#fff3e0] text-[#e65100]",
   DELIVERED: "bg-green-light-6 text-green",
@@ -14,7 +16,17 @@ const statusClass: Record<string, string> = {
   CANCELLED: "bg-red-light-6 text-red",
 };
 
-export default function RecentOrders() {
+const statusLabels: Record<string, string> = {
+  PENDING: "Chờ xác nhận",
+  CONFIRMED: "Đã xác nhận",
+  PROCESSING: "Đang xử lý",
+  SHIPPING: "Đang giao",
+  DELIVERED: "Đã giao",
+  COMPLETED: "Hoàn tất",
+  CANCELLED: "Đã hủy",
+};
+
+export default function RecentOrders({ dateRange }: { dateRange?: AnalyticsDateRange }) {
   const [rows, setRows] = useState<
     {
       orderCode: string;
@@ -27,12 +39,16 @@ export default function RecentOrders() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    const params = dateRange
+      ? { fromDate: dateRange.fromDate, toDate: dateRange.toDate }
+      : undefined;
     adminStatisticsApi
-      .recentOrders(10)
+      .recentOrders(10, params)
       .then((res) => setRows(res.data.recentOrders ?? []))
       .catch(() => setRows([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [dateRange?.fromDate, dateRange?.toDate]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-3/50 overflow-hidden">
@@ -80,7 +96,7 @@ export default function RecentOrders() {
                         statusClass[o.status] ?? "bg-gray-2 text-dark"
                       }`}
                     >
-                      {o.status}
+                      {statusLabels[o.status] ?? o.status}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-sm text-[#606882]">

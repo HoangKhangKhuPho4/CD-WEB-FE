@@ -56,6 +56,8 @@ export function canAccessAdminPanel(user: RbacUser | null | undefined): boolean 
     "REPORT_REVENUE",
     "REPORT_SALES",
     "WARRANTY_MANAGE",
+    "REVIEW_MANAGE",
+    "REVIEW_REPLY",
     "SYSTEM_CONFIG_MANAGE",
     "ROLE_PERM_EDIT",
     "ROLE_ADMIN",

@@ -1,20 +1,40 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Breadcrumb from "../Common/Breadcrumb";
 import Image from "next/image";
 import Orders from "../Orders";
 import AccountDetailsForm from "./AccountDetailsForm";
 import AddressBook from "./AddressBook";
+import MyReviewsPanel from "./MyReviewsPanel";
 import { useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
-import { logout } from "@/redux/features/auth-slice";
-import { useRouter } from "next/navigation";
+import { logout, updateUser } from "@/redux/features/auth-slice";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getMe } from "@/utils/userApi";
 
 const MyAccount = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const { user } = useAppSelector((state) => state.authReducer);
   const dispatch = useDispatch();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "reviews" || tab === "orders" || tab === "addresses" || tab === "account-details") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    getMe()
+      .then((fresh) => dispatch(updateUser(fresh)))
+      .catch(() => {
+        /* AuthUserSync hoặc guard xử lý 401 */
+      });
+  }, [dispatch]);
+
+  const avatarSrc = user?.avatarUrl || "/images/users/user-04.jpg";
 
   const handleLogout = () => {
     dispatch(logout());
@@ -33,12 +53,25 @@ const MyAccount = () => {
               <div className="flex xl:flex-col">
                 <div className="hidden lg:flex flex-wrap items-center gap-5 py-6 px-4 sm:px-7.5 xl:px-9 border-r xl:border-r-0 xl:border-b border-gray-3">
                   <div className="max-w-[64px] w-full h-16 rounded-full overflow-hidden">
-                    <Image
-                      src="/images/users/user-04.jpg"
-                      alt="user"
-                      width={64}
-                      height={64}
-                    />
+                    {user?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarSrc}
+                        alt={user?.name || "user"}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Image
+                        src={avatarSrc}
+                        alt={user?.name || "user"}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -161,6 +194,32 @@ const MyAccount = () => {
                     </button>
 
                     <button
+                      onClick={() => setActiveTab("reviews")}
+                      className={`flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 hover:bg-blue hover:text-white ${
+                        activeTab === "reviews"
+                          ? "text-white bg-blue"
+                          : "text-dark-2 bg-gray-1"
+                      }`}
+                    >
+                      <svg
+                        className="fill-current"
+                        width="22"
+                        height="22"
+                        viewBox="0 0 22 22"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M11 1.83334L13.5767 7.05667L19.4333 7.88334L15.2167 11.9433L16.1533 17.7667L11 15.0833L5.84667 17.7667L6.78334 11.9433L2.56667 7.88334L8.42334 7.05667L11 1.83334Z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          fill="none"
+                        />
+                      </svg>
+                      Đánh Giá
+                    </button>
+
+                    <button
                       onClick={() => setActiveTab("addresses")}
                       className={`flex items-center rounded-md gap-2.5 py-3 px-4.5 ease-out duration-200 hover:bg-blue hover:text-white ${
                         activeTab === "addresses"
@@ -260,7 +319,7 @@ const MyAccount = () => {
             {/* <!-- dashboard tab content start --> */}
 
             <div
-              className={`xl:max-w-[770px] w-full bg-white rounded-xl shadow-1 py-9.5 px-4 sm:px-7.5 xl:px-10 ${
+              className={`flex-1 min-w-0 w-full bg-white rounded-xl shadow-1 py-9.5 px-4 sm:px-7.5 xl:px-10 ${
                 activeTab === "dashboard" ? "block" : "hidden"
               }`}
             >
@@ -277,14 +336,14 @@ const MyAccount = () => {
 
               <p className="text-custom-sm mt-4">
                 Từ bảng điều khiển tài khoản của bạn, bạn có thể xem các đơn hàng gần đây,
-                quản lý địa chỉ giao hàng và thanh toán, cũng như chỉnh sửa mật khẩu và chi tiết tài khoản.
+                quản lý đánh giá sản phẩm, địa chỉ giao hàng và thanh toán, cũng như chỉnh sửa mật khẩu và chi tiết tài khoản.
               </p>
             </div>
             {/* <!-- dashboard tab content end -->
 
           <!-- orders tab content start --> */}
             <div
-              className={`xl:max-w-[770px] w-full bg-white rounded-xl shadow-1 ${
+              className={`flex-1 min-w-0 w-full bg-white rounded-xl shadow-1 ${
                 activeTab === "orders" ? "block" : "hidden"
               }`}
             >
@@ -294,7 +353,7 @@ const MyAccount = () => {
 
           <!-- downloads tab content start --> */}
             <div
-              className={`xl:max-w-[770px] w-full bg-white rounded-xl shadow-1 py-9.5 px-4 sm:px-7.5 xl:px-10 ${
+              className={`flex-1 min-w-0 w-full bg-white rounded-xl shadow-1 py-9.5 px-4 sm:px-7.5 xl:px-10 ${
                 activeTab === "downloads" ? "block" : "hidden"
               }`}
             >
@@ -572,6 +631,7 @@ const MyAccount = () => {
             {/* <!-- addresses tab content end -->
 
           <!-- details tab content start --> */}
+            {activeTab === "reviews" ? <MyReviewsPanel /> : null}
             {activeTab === "account-details" ? <AccountDetailsForm /> : null}
             {/* <!-- details tab content end -->
           <!--== user dashboard content end ==--> */}

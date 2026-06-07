@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ShopDetails from "@/components/ShopDetails";
 import type { Metadata } from "next";
 
@@ -15,7 +15,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ShopDetailsByIdPage() {
   return (
     <main>
-      <ShopDetails />
+      <Suspense fallback={<div className="py-20 text-center">Đang tải...</div>}>
+        <ShopDetails />
+      </Suspense>
     </main>
   );
 }

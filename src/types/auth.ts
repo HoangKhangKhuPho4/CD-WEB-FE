@@ -19,6 +19,8 @@ export interface User {
   birth?: string | null;
   gender?: string | null;
   address?: string | null;
+  provider?: string | null;
+  avatarUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
   lastLoginAt?: string | null;

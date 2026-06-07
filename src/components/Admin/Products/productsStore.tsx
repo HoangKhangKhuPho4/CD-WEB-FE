@@ -53,9 +53,9 @@ type ProductsContextValue = {
   toggleFeatured: (id: string) => Promise<void>;
   getById: (id: string) => AdminProduct | undefined;
   categories: string[];
-  manufacturers: string[];
+  manufacturers: { value: string; label: string }[];
   categoryOptions: { id: number; name: string }[];
-  producerOptions: { id: number; name: string }[];
+  producerOptions: { id: number; name: string; code?: string; label: string }[];
   loading: boolean;
   totalPages: number;
   totalElements: number;
@@ -129,9 +129,16 @@ export function adminFormatMoneyVND(amount: number) {
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
-export function ProductsProvider({ children }: { children: React.ReactNode }) {
+export function ProductsProvider({
+  children,
+  variant = "list",
+}: {
+  children: React.ReactNode;
+  /** form: trang thêm/sửa — chỉ tải danh mục & hãng, bỏ list + stats */
+  variant?: "list" | "form";
+}) {
   const [products, setProducts] = useState<AdminProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(variant === "list");
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [apiStats, setApiStats] = useState({
@@ -141,7 +148,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     outOfStock: 0,
   });
   const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string }[]>([]);
-  const [producerOptions, setProducerOptions] = useState<{ id: number; name: string }[]>([]);
+  const [producerOptions, setProducerOptions] = useState<
+    { id: number; name: string; code?: string; label: string }[]
+  >([]);
+  const [metaReady, setMetaReady] = useState(variant === "form");
   const [filters, setFilters] = useState<ProductFiltersState>({
     query: "",
     category: "",
@@ -162,10 +172,19 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         setCategoryOptions(cRes.data.data.map((c) => ({ id: c.id, name: c.name })));
       }
       if (pRes.data.success) {
-        setProducerOptions(pRes.data.data.map((p) => ({ id: p.id, name: p.name })));
+        setProducerOptions(
+          pRes.data.data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            label: p.code ? `${p.name} (${p.code})` : p.name,
+          }))
+        );
       }
     } catch {
       // ignore
+    } finally {
+      setMetaReady(true);
     }
   }, []);
 
@@ -223,12 +242,16 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void loadMeta();
-    void loadStats();
-  }, [loadMeta, loadStats]);
+    if (variant === "list") {
+      void loadStats();
+    }
+  }, [loadMeta, loadStats, variant]);
 
   useEffect(() => {
-    void loadProducts();
-  }, [loadProducts]);
+    if (variant === "list" && metaReady) {
+      void loadProducts();
+    }
+  }, [loadProducts, variant, metaReady]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -239,7 +262,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [categoryOptions]
   );
   const manufacturers = useMemo(
-    () => producerOptions.map((p) => p.name),
+    () => producerOptions.map((p) => ({ value: p.name, label: p.label })),
     [producerOptions]
   );
 
@@ -281,11 +304,13 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         isFeatured: input.featured,
       });
       if (!res.data.success) throw new Error(res.data.message);
-      await loadProducts();
-      void loadStats();
+      if (variant === "list") {
+        await loadProducts();
+        void loadStats();
+      }
       return String(res.data.data.id);
     },
-    [categoryOptions, producerOptions, loadProducts]
+    [categoryOptions, producerOptions, loadProducts, loadStats, variant]
   );
 
   const updateProduct = useCallback(
@@ -308,9 +333,11 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         if (pr) body.producerId = pr.id;
       }
       await adminProductApi.update(numId, body);
-      await loadProducts();
+      if (variant === "list") {
+        await loadProducts();
+      }
     },
-    [categoryOptions, producerOptions, loadProducts]
+    [categoryOptions, producerOptions, loadProducts, variant]
   );
 
   const deleteProduct = useCallback(

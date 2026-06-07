@@ -6,9 +6,14 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   fetchProductReviews,
+  fetchReviewById,
+  fetchReviewEligibility,
   fetchReviewSummary,
+  markReviewHelpful,
   submitReview,
+  updateReview,
   type PublicReview,
+  type ReviewEligibility,
   type ReviewSummary,
 } from "@/utils/reviewApi";
 
@@ -61,6 +66,8 @@ function formatReviewDate(iso?: string) {
   }
 }
 
+type FormMode = "create" | "edit" | "hidden";
+
 export default function ProductReviewsTab({
   productId,
   isAuthenticated,
@@ -74,10 +81,18 @@ export default function ProductReviewsTab({
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [helpfulLoadingId, setHelpfulLoadingId] = useState<number | null>(null);
+
+  const [eligibility, setEligibility] = useState<ReviewEligibility | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>("hidden");
+  const [editReviewId, setEditReviewId] = useState<number | null>(null);
 
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [pros, setPros] = useState("");
+  const [cons, setCons] = useState("");
 
   const loadReviews = useCallback(async () => {
     if (!productId) return;
@@ -100,9 +115,62 @@ export default function ProductReviewsTab({
     }
   }, [productId, page]);
 
+  const loadEligibility = useCallback(async () => {
+    if (!productId || !isAuthenticated) {
+      setEligibility(null);
+      setFormMode("hidden");
+      return;
+    }
+    setEligibilityLoading(true);
+    try {
+      const data = await fetchReviewEligibility(productId);
+      setEligibility(data);
+      if (!data) {
+        setFormMode("create");
+        return;
+      }
+      if (data.alreadyReviewed && data.existingReviewId) {
+        setFormMode("edit");
+        setEditReviewId(data.existingReviewId);
+        const existing = await fetchReviewById(data.existingReviewId);
+        if (existing) {
+          setRating(existing.rating);
+          setTitle(existing.title ?? "");
+          setContent(existing.content ?? "");
+          setPros(existing.pros ?? "");
+          setCons(existing.cons ?? "");
+        }
+      } else if (data.canReview) {
+        setFormMode("create");
+        setEditReviewId(null);
+        setRating(5);
+        setTitle("");
+        setContent("");
+        setPros("");
+        setCons("");
+      } else {
+        setFormMode("hidden");
+      }
+    } finally {
+      setEligibilityLoading(false);
+    }
+  }, [productId, isAuthenticated]);
+
   useEffect(() => {
     void loadReviews();
   }, [loadReviews]);
+
+  useEffect(() => {
+    void loadEligibility();
+  }, [loadEligibility]);
+
+  const resetForm = () => {
+    setRating(5);
+    setTitle("");
+    setContent("");
+    setPros("");
+    setCons("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,29 +179,62 @@ export default function ProductReviewsTab({
       return;
     }
     if (!content.trim() && !title.trim()) {
-      toast.error("Vui lòng nhập nội dung đánh giá");
+      toast.error("Vui lòng nhập tiêu đề hoặc nội dung đánh giá");
       return;
     }
     setSubmitting(true);
     try {
-      const result = await submitReview({
-        productId,
+      const payload = {
         rating,
         title: title.trim() || undefined,
         content: content.trim() || undefined,
-      });
-      if (result.ok) {
-        toast.success("Đã gửi đánh giá — chờ duyệt");
-        setTitle("");
-        setContent("");
-        setRating(5);
-        setPage(0);
-        await loadReviews();
+        pros: pros.trim() || undefined,
+        cons: cons.trim() || undefined,
+      };
+
+      if (formMode === "edit" && editReviewId) {
+        const result = await updateReview(editReviewId, payload);
+        if (result.ok) {
+          toast.success(result.message || "Đã cập nhật — chờ duyệt lại");
+          await Promise.all([loadReviews(), loadEligibility()]);
+        } else {
+          toast.error(result.message || "Cập nhật thất bại");
+        }
       } else {
-        toast.error(result.message || "Gửi đánh giá thất bại");
+        const result = await submitReview({
+          productId,
+          ...payload,
+          variantId: eligibility?.eligibleVariantId,
+          orderId: eligibility?.eligibleOrderId,
+        });
+        if (result.ok) {
+          toast.success(result.message || "Đã gửi đánh giá — chờ duyệt");
+          resetForm();
+          setPage(0);
+          await Promise.all([loadReviews(), loadEligibility()]);
+        } else {
+          toast.error(result.message || "Gửi đánh giá thất bại");
+        }
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleHelpful = async (reviewId: number) => {
+    setHelpfulLoadingId(reviewId);
+    try {
+      const result = await markReviewHelpful(reviewId);
+      if (result.ok && result.review) {
+        setReviews((prev) =>
+          prev.map((r) => (r.id === reviewId ? result.review! : r))
+        );
+        toast.success("Cảm ơn phản hồi của bạn!");
+      } else {
+        toast.error(result.message || "Không thể đánh dấu hữu ích");
+      }
+    } finally {
+      setHelpfulLoadingId(null);
     }
   };
 
@@ -141,10 +242,53 @@ export default function ProductReviewsTab({
   const total = summary?.totalReviews ?? 0;
   const dist = summary?.ratingDistribution ?? {};
 
+  const renderFormMessage = () => {
+    if (!isAuthenticated) {
+      return (
+        <p className="mb-6 text-sm text-gray-500">
+          <Link href="/signin" className="text-blue hover:underline">
+            Đăng nhập
+          </Link>{" "}
+          để gửi đánh giá sản phẩm.
+        </p>
+      );
+    }
+    if (eligibilityLoading) {
+      return (
+        <p className="mb-6 text-sm text-gray-500">Đang kiểm tra quyền đánh giá...</p>
+      );
+    }
+    if (formMode === "edit") {
+      return (
+        <p className="mb-6 text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-md">
+          Bạn đã đánh giá sản phẩm này. Chỉnh sửa bên dưới — sau khi sửa sẽ chờ duyệt lại.
+          {" "}
+          <Link href="/my-account?tab=reviews" className="text-blue hover:underline">
+            Xem tất cả đánh giá
+          </Link>
+        </p>
+      );
+    }
+    if (formMode === "create") {
+      return (
+        <p className="mb-6 text-sm text-gray-500">
+          {eligibility?.isVerifiedEligible
+            ? "Đơn hàng đã giao — đánh giá được gắn nhãn mua hàng xác thực."
+            : "Đánh giá sẽ hiển thị sau khi được duyệt."}
+        </p>
+      );
+    }
+    return (
+      <p className="mb-6 text-sm text-gray-500">
+        Bạn không thể đánh giá sản phẩm này lúc này.
+      </p>
+    );
+  };
+
+  const showForm = isAuthenticated && (formMode === "create" || formMode === "edit");
+
   return (
-    <div
-      className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 flex`}
-    >
+    <div className="flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 flex">
       <div className="max-w-[570px] w-full">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-9">
           <h2 className="font-medium text-2xl text-dark">
@@ -220,6 +364,12 @@ export default function ProductReviewsTab({
                   {review.content && (
                     <p className="text-dark mt-2">{review.content}</p>
                   )}
+                  {(review.pros || review.cons) && (
+                    <div className="mt-2 text-sm text-gray-500">
+                      {review.pros && <p>Ưu: {review.pros}</p>}
+                      {review.cons && <p>Nhược: {review.cons}</p>}
+                    </div>
+                  )}
                   {review.replyContent && (
                     <div className="mt-4 pl-4 border-l-2 border-blue bg-blue/5 p-3 rounded-r-md">
                       <p className="text-xs font-medium text-blue mb-1">
@@ -228,6 +378,18 @@ export default function ProductReviewsTab({
                       <p className="text-sm text-dark">{review.replyContent}</p>
                     </div>
                   )}
+                  <div className="mt-4 flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={helpfulLoadingId === review.id}
+                      onClick={() => void handleHelpful(review.id)}
+                      className="text-xs text-gray-500 hover:text-blue disabled:opacity-50"
+                    >
+                      {helpfulLoadingId === review.id
+                        ? "Đang gửi..."
+                        : `Hữu ích (${review.helpfulCount ?? 0})`}
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -262,68 +424,91 @@ export default function ProductReviewsTab({
       <div className="max-w-[550px] w-full">
         <form onSubmit={(e) => void handleSubmit(e)}>
           <h2 className="font-medium text-2xl text-dark mb-3.5">
-            Viết đánh giá
+            {formMode === "edit" ? "Chỉnh sửa đánh giá" : "Viết đánh giá"}
           </h2>
 
-          {!isAuthenticated ? (
-            <p className="mb-6 text-sm text-gray-500">
-              <Link href="/signin" className="text-blue hover:underline">
-                Đăng nhập
-              </Link>{" "}
-              để gửi đánh giá sản phẩm.
-            </p>
-          ) : (
-            <p className="mb-6 text-sm text-gray-500">
-              Đánh giá sẽ được hiển thị sau khi được duyệt.
-            </p>
+          {renderFormMessage()}
+
+          {showForm && (
+            <>
+              <div className="flex items-center gap-3 mb-7.5">
+                <span className="text-sm">Đánh giá của bạn*</span>
+                <StarRating rating={rating} interactive onChange={setRating} />
+              </div>
+
+              <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6 space-y-5">
+                <div>
+                  <label htmlFor="review-title" className="block mb-2.5 text-sm">
+                    Tiêu đề
+                  </label>
+                  <input
+                    id="review-title"
+                    type="text"
+                    value={title}
+                    disabled={submitting}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Tóm tắt trải nghiệm"
+                    className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none focus:border-blue disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="review-content" className="block mb-2.5 text-sm">
+                    Nội dung*
+                  </label>
+                  <textarea
+                    id="review-content"
+                    rows={5}
+                    value={content}
+                    disabled={submitting}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Chia sẻ trải nghiệm của bạn..."
+                    className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none focus:border-blue disabled:opacity-50"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="review-pros" className="block mb-2.5 text-sm">
+                      Ưu điểm
+                    </label>
+                    <input
+                      id="review-pros"
+                      type="text"
+                      value={pros}
+                      disabled={submitting}
+                      onChange={(e) => setPros(e.target.value)}
+                      placeholder="Tùy chọn"
+                      className="rounded-md border border-gray-3 bg-gray-1 w-full py-2.5 px-5 outline-none focus:border-blue disabled:opacity-50"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="review-cons" className="block mb-2.5 text-sm">
+                      Nhược điểm
+                    </label>
+                    <input
+                      id="review-cons"
+                      type="text"
+                      value={cons}
+                      disabled={submitting}
+                      onChange={(e) => setCons(e.target.value)}
+                      placeholder="Tùy chọn"
+                      className="rounded-md border border-gray-3 bg-gray-1 w-full py-2.5 px-5 outline-none focus:border-blue disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex font-medium text-white bg-blue py-3 px-7.5 rounded-md hover:bg-blue-dark disabled:opacity-50"
+                >
+                  {submitting
+                    ? "Đang gửi..."
+                    : formMode === "edit"
+                      ? "Cập nhật đánh giá"
+                      : "Gửi đánh giá"}
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="flex items-center gap-3 mb-7.5">
-            <span className="text-sm">Đánh giá của bạn*</span>
-            <StarRating
-              rating={rating}
-              interactive={isAuthenticated}
-              onChange={setRating}
-            />
-          </div>
-
-          <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-            <div className="mb-5">
-              <label htmlFor="review-title" className="block mb-2.5 text-sm">
-                Tiêu đề
-              </label>
-              <input
-                id="review-title"
-                type="text"
-                value={title}
-                disabled={!isAuthenticated || submitting}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Tóm tắt trải nghiệm"
-                className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none focus:border-blue disabled:opacity-50"
-              />
-            </div>
-            <div className="mb-5">
-              <label htmlFor="review-content" className="block mb-2.5 text-sm">
-                Nội dung*
-              </label>
-              <textarea
-                id="review-content"
-                rows={5}
-                value={content}
-                disabled={!isAuthenticated || submitting}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Chia sẻ trải nghiệm của bạn..."
-                className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none focus:border-blue disabled:opacity-50"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!isAuthenticated || submitting}
-              className="inline-flex font-medium text-white bg-blue py-3 px-7.5 rounded-md hover:bg-blue-dark disabled:opacity-50"
-            >
-              {submitting ? "Đang gửi..." : "Gửi đánh giá"}
-            </button>
-          </div>
         </form>
       </div>
     </div>
