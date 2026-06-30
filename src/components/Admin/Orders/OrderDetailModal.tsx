@@ -225,18 +225,48 @@ export default function OrderDetailModal({
             </div>
             <div>
               <p className="text-xs font-bold text-[#8D93A5] uppercase mb-2">Sản phẩm</p>
-              <ul className="space-y-2">
-                {detail.items.map((item, i) => (
-                  <li
-                    key={i}
-                    className="flex justify-between text-sm p-2 rounded-lg bg-[#F7F9FC]"
-                  >
-                    <span>
-                      {item.name} × {item.qty}
-                    </span>
-                    <span className="font-semibold">{item.price}</span>
-                  </li>
-                ))}
+              <ul className="space-y-3">
+                {detail.items.map((item, i) => {
+                  const assigned = item.serialNumbers ?? [];
+                  const missing = Math.max(0, item.qty - assigned.length);
+                  return (
+                    <li
+                      key={item.orderDetailId ?? i}
+                      className="text-sm p-3 rounded-lg bg-[#F7F9FC] space-y-2"
+                    >
+                      <div className="flex justify-between gap-3">
+                        <span>
+                          {item.name} × {item.qty}
+                        </span>
+                        <span className="font-semibold shrink-0">{item.price}</span>
+                      </div>
+                      <div className="rounded-lg border border-[#3C50E0]/15 bg-white px-3 py-2">
+                        <p className="text-[10px] font-bold text-[#8D93A5] uppercase tracking-wide mb-1.5">
+                          Mã Serial / IMEI
+                        </p>
+                        {assigned.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {assigned.map((code) => (
+                              <span
+                                key={code}
+                                className="inline-block font-mono text-xs font-semibold text-[#1C3FB7] bg-[#EEF2FF] px-2 py-1 rounded-md"
+                              >
+                                {code}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[#8D93A5] italic">Chưa gán Serial / IMEI</p>
+                        )}
+                        {missing > 0 && (
+                          <p className="text-xs text-amber-700 mt-1.5">
+                            Còn thiếu {missing} mã cho dòng này
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="text-right font-bold text-dark mt-3">
                 Tổng: {formatVnd(Number(detail.total))}
@@ -280,6 +310,14 @@ export default function OrderDetailModal({
                     <p className="text-sm font-medium">
                       {item.name} × {item.qty}
                     </p>
+                    {(item.serialNumbers?.length ?? 0) > 0 && (
+                      <p className="text-xs text-[#606882]">
+                        Đã gán:{" "}
+                        <span className="font-mono font-semibold text-[#3C50E0]">
+                          {item.serialNumbers!.join(", ")}
+                        </span>
+                      </p>
+                    )}
                     <textarea
                       value={imeiInputs[item.orderDetailId] ?? ""}
                       onChange={(e) =>

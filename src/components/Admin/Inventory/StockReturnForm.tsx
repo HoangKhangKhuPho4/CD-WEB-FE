@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import PrimaryButton from "@/components/Admin/shared/PrimaryButton";
 import VariantSearchInput from "@/components/Admin/Inventory/VariantSearchInput";
 import { extractInventoryError, formatVariantLabel } from "@/components/Admin/Inventory/inventoryUtils";
+import GhnReturnQueuePanel from "@/components/Admin/Inventory/GhnReturnQueuePanel";
 import { adminInventoryApi, type VariantSearchHit } from "@/utils/adminApi";
 
 type ReturnMode = "imei" | "quantity";
@@ -81,9 +82,18 @@ export default function StockReturnForm({ onSuccess }: { onSuccess?: () => void 
   return (
     <div className="max-w-xl space-y-5">
       <div>
-        <h3 className="text-lg font-bold text-dark">Nhập kho hàng trả lại</h3>
-        <p className="text-sm text-[#6C6F93] mt-1">Theo IMEI hoặc theo số lượng biến thể.</p>
+        <h3 className="text-lg font-bold text-dark">Xử lý hàng hoàn</h3>
+        <p className="text-sm text-[#6C6F93] mt-1">
+          GHN hoàn hàng → serial chuyển RETURNED. Quét kiểm định: nguyên vẹn (AVAILABLE) hoặc lỗi (DEFECTIVE).
+        </p>
       </div>
+
+      <GhnReturnQueuePanel
+        onScan={(code) => {
+          setMode("imei");
+          setImei(code);
+        }}
+      />
 
       <div className="flex gap-2 p-1 bg-[#F7F9FC] rounded-lg w-fit">
         {(["imei", "quantity"] as ReturnMode[]).map((m) => (

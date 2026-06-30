@@ -1,9 +1,11 @@
 "use client";
 
+import { useAppSelector } from "@/redux/store";
+import { warehouseWarrantyLinks } from "@/components/Admin/adminNavConfig";
 import AdminSubNav from "@/components/Admin/AdminSubNav";
-import { warrantyTicketLinks } from "@/components/Admin/adminNavConfig";
 
-/** Sub-nav trang quản lý phiếu bảo hành (staff). */
+/** Sub-nav bảo hành — gồm tiếp nhận kho + quản lý phiếu. */
 export default function AdminWarrantySubNav() {
-  return <AdminSubNav links={warrantyTicketLinks} />;
+  const user = useAppSelector((s) => s.authReducer.user);
+  return <AdminSubNav links={warehouseWarrantyLinks} />;
 }

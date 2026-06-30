@@ -25,6 +25,7 @@ export interface OrderDetail {
     name: string;
     qty: number;
     price: string;
+    serialNumbers?: string[];
   }[];
   timeline?: { status: string; note?: string; changedBy?: string; createdAt?: string }[];
 }
@@ -79,12 +80,19 @@ function mapDetail(d: AdminOrderDetail): OrderDetail {
         name: i.productName,
         qty: i.quantity,
         price: String(i.unitPrice),
+        serialNumbers: i.assignedImeis?.filter(Boolean) ?? [],
       })) ?? [],
     timeline: d.timeline,
   };
 }
 
-export function OrdersAdminProvider({ children }: { children: React.ReactNode }) {
+export function OrdersAdminProvider({
+  children,
+  fulfillmentMode = false,
+}: {
+  children: React.ReactNode;
+  fulfillmentMode?: boolean;
+}) {
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -92,7 +100,7 @@ export function OrdersAdminProvider({ children }: { children: React.ReactNode })
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [keyword, setKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(fulfillmentMode ? "CONFIRMED" : "");
   const [pendingCount, setPendingCount] = useState(0);
 
   const load = useCallback(async () => {

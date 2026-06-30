@@ -8,7 +8,7 @@ import {
   type StaffOverviewStatistics,
 } from "@/utils/adminApi";
 import type { RootState } from "@/redux/store";
-import { hasAnyPermission, hasPermission } from "@/utils/rbac";
+import { hasAnyPermission, hasPermission, isWarehouseOnlyUser } from "@/utils/rbac";
 import {
   resolveAnalyticsDateRange,
   type AnalyticsTimeFilter,
@@ -55,7 +55,8 @@ export default function StaffDashboard() {
   const [data, setData] = useState<StaffOverviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isWarehouse = hasAnyPermission(user, ["STOCK_IMPORT", "IMEI_MANAGE", "INVENTORY_STAT"]);
+  const warehouseOnly = isWarehouseOnlyUser(user);
+  const isWarehouse = warehouseOnly || hasAnyPermission(user, ["STOCK_IMPORT", "IMEI_MANAGE", "INVENTORY_STAT"]);
   const isSales =
     user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "SALES") ?? false;
   const showLowStock = isWarehouse || hasPermission(user, "INVENTORY_STAT");
@@ -82,6 +83,8 @@ export default function StaffDashboard() {
       </div>
     );
   }
+
+  const ordersHref = warehouseOnly ? "/admin/warehouse-fulfillment" : "/admin/orders";
 
   const title = isWarehouse && !isSales
     ? "Tổng quan kho"
@@ -122,25 +125,25 @@ export default function StaffDashboard() {
         <StatCard
           label="Đơn chờ xác nhận"
           value={data?.pendingOrders ?? 0}
-          href="/admin/orders"
+          href={warehouseOnly ? undefined : "/admin/orders"}
           accent="#F27430"
         />
         <StatCard
           label="Đã xác nhận"
           value={data?.confirmedOrders ?? 0}
-          href="/admin/orders"
+          href={ordersHref}
           accent="#3C50E0"
         />
         <StatCard
           label="Đang giao hàng"
           value={data?.shippingOrders ?? 0}
-          href="/admin/orders"
+          href={ordersHref}
           accent="#02AAA4"
         />
         <StatCard
           label={ordersLabel}
           value={data?.ordersToday ?? 0}
-          href="/admin/orders"
+          href={ordersHref}
           accent="#1C274C"
         />
       </div>

@@ -72,3 +72,21 @@ export function isAdminUser(user: RbacUser | null | undefined): boolean {
     return n === "ADMIN" || n === "ROLE_ADMIN";
   });
 }
+
+export function isWarehouseUser(user: RbacUser | null | undefined): boolean {
+  return user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "WAREHOUSE") ?? false;
+}
+
+export function isSalesUser(user: RbacUser | null | undefined): boolean {
+  return user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "SALES") ?? false;
+}
+
+/** Chỉ role kho (không Admin/Sales) — menu & route warehouse-only. */
+export function isWarehouseOnlyUser(user: RbacUser | null | undefined): boolean {
+  return isWarehouseUser(user) && !isAdminUser(user) && !isSalesUser(user);
+}
+
+/** Nhân viên kho bắt buộc nhập Serial theo PO (không nhập tự do). */
+export function warehousePoRequired(user: RbacUser | null | undefined): boolean {
+  return isWarehouseUser(user) && !isAdminUser(user);
+}

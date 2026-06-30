@@ -5,7 +5,9 @@ import CouponManagement from "@/components/Admin/Inventory/CouponManagement";
 import ProductAttributes from "@/components/Admin/Inventory/ProductAttributes";
 import BrandGrid from "@/components/Admin/Producers/BrandGrid";
 import AdminCatalogSubNav from "@/components/Admin/AdminCatalogSubNav";
+import AdminWarehouseSubNav from "@/components/Admin/AdminWarehouseSubNav";
 import { useAppSelector } from "@/redux/store";
+import { isWarehouseOnlyUser } from "@/utils/rbac";
 import { canManageCoupons, canManageProducers } from "@/utils/catalogPermissions";
 import { useEffect, useState } from "react";
 
@@ -13,6 +15,7 @@ type InventoryTab = "stock" | "coupons" | "brands";
 
 export default function InventoryPage() {
   const user = useAppSelector((s) => s.authReducer.user);
+  const warehouseOnly = isWarehouseOnlyUser(user);
   const showCouponsTab = canManageCoupons(user);
   const showBrandsTab = canManageProducers(user);
   const showExtraTabs = showCouponsTab || showBrandsTab;
@@ -36,7 +39,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <AdminCatalogSubNav />
+      {warehouseOnly ? <AdminWarehouseSubNav /> : <AdminCatalogSubNav />}
 
       {showExtraTabs && (
         <div className="flex flex-wrap bg-white rounded-lg p-1 w-fit border border-gray-3/50 shadow-sm gap-1">

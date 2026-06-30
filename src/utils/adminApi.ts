@@ -1,4 +1,5 @@
 import api, { type ApiResponse, type PageResponse } from "./api";
+import type { Page } from "@/types/api";
 import { canAccessAdminPanel } from "@/utils/rbac";
 import type { PermissionItem, RoleDetail } from "@/types/rbac";
 
@@ -18,10 +19,13 @@ export interface OverviewStatistics {
 export interface StaffOverviewStatistics {
   pendingOrders: number;
   confirmedOrders: number;
+  processingOrders?: number;
   shippingOrders: number;
   ordersToday: number;
   lowStockVariants: number;
   customerAccounts: number;
+  pendingPurchaseOrders?: number;
+  pendingReturnOrders?: number;
 }
 
 export interface RevenueChartData {
@@ -513,8 +517,20 @@ export interface InventoryStatRow {
   unitPrice?: number;
   stockValue?: number;
   status?: string;
+  defectiveQuantity?: number;
+  shelfLocationHint?: string;
   /** @deprecated dùng stockQuantity */
   currentStock?: number;
+}
+
+export interface PendingReturnItem {
+  productItemId: number;
+  imei?: string;
+  serialNumber?: string;
+  productName?: string;
+  skuCode?: string;
+  orderCode?: string;
+  updatedAt?: string;
 }
 
 export interface InventoryTransaction {
@@ -566,6 +582,8 @@ export interface ValidateImportItemResult {
   variantName?: string;
   currentStock?: number;
   requestedQuantity?: number;
+  unitCost?: number;
+  lineTotal?: number;
   valid: boolean;
   message?: string;
 }
@@ -573,6 +591,15 @@ export interface ValidateImportItemResult {
 export interface ValidateImportResponse {
   allValid: boolean;
   results: ValidateImportItemResult[];
+  supplier?: string;
+  note?: string;
+  estimatedTotalValue?: number;
+}
+
+export interface InventorySummary {
+  lowStockCount: number;
+  outOfStockCount: number;
+  importTransactionCount: number;
 }
 
 export interface InventoryTransactionQuery {
@@ -589,6 +616,11 @@ export interface InventoryTransactionQuery {
 }
 
 export const adminInventoryApi = {
+  summary: (lowStockThreshold = 10) =>
+    api.get<ApiResponse<InventorySummary>>("/admin/inventory/summary", {
+      params: { lowStockThreshold },
+    }),
+
   stats: (lowStockThreshold = 10) =>
     api.get<ApiResponse<InventoryStatRow[]>>("/admin/inventory/stats", {
       params: { lowStockThreshold },
@@ -600,15 +632,20 @@ export const adminInventoryApi = {
       responseType: "blob",
     }),
 
+  pendingReturns: (limit = 20) =>
+    api.get<ApiResponse<PendingReturnItem[]>>("/admin/inventory/pending-returns", {
+      params: { limit },
+    }),
+
   validateImport: (body: {
-    items: { variantId: number; quantity: number }[];
+    items: { variantId: number; quantity: number; unitCost?: number }[];
     supplier?: string;
     note?: string;
   }) =>
     api.post<ApiResponse<ValidateImportResponse>>("/admin/inventory/import/validate", body),
 
   importStock: (body: {
-    items: { variantId: number; quantity: number }[];
+    items: { variantId: number; quantity: number; unitCost?: number }[];
     supplier?: string;
     note?: string;
   }) => api.post<ApiResponse<string>>("/admin/inventory/import", body),
@@ -666,6 +703,266 @@ export const adminInventoryApi = {
     api.get<ApiResponse<PageResponse<ProductItemRow>>>("/admin/inventory/product-items", {
       params,
     }),
+};
+
+// ─── Purchase orders (warehouse PO queue) ───────────────────────────────────
+
+export type PurchaseOrderFeStatus = "pending" | "receiving" | "completed";
+
+export interface PurchaseOrderSummary {
+  id: number;
+  code: string;
+  supplier: string;
+  supplierId?: number;
+  items: number;
+  expectedDate: string;
+  status: PurchaseOrderFeStatus;
+  rawStatus?: string;
+  totalAmount?: number;
+  totalQuantity?: number;
+  notes?: string;
+  rejectReason?: string;
+}
+
+export interface PurchaseOrderCreateLine {
+  variantId: number;
+  quantityOrdered: number;
+  unitCost?: number;
+}
+
+export interface PurchaseOrderCreateRequest {
+  supplierId: number;
+  expectedDate?: string;
+  notes?: string;
+  lines: PurchaseOrderCreateLine[];
+  submitForApproval?: boolean;
+}
+
+export interface SupplierOption {
+  id: number;
+  name: string;
+  code?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface PurchaseOrderLineItem {
+  id: number;
+  variantId?: number;
+  skuCode?: string;
+  productName?: string;
+  quantityOrdered: number;
+  quantityReceived: number;
+  unitCost?: number;
+}
+
+export interface PurchaseOrderDetail extends PurchaseOrderSummary {
+  orderDate?: string;
+  receivedDate?: string;
+  lineItems?: PurchaseOrderLineItem[];
+}
+
+export const adminPurchaseOrderApi = {
+  list: (params?: {
+    status?: PurchaseOrderFeStatus;
+    scope?: "procurement" | "approval" | "warehouse";
+  }) =>
+    api.get<ApiResponse<PurchaseOrderSummary[]>>("/admin/purchase-orders", {
+      params: {
+        status: params?.status,
+        scope: params?.scope === "warehouse" ? undefined : params?.scope,
+      },
+    }),
+
+  listPaged: (params?: {
+    status?: PurchaseOrderFeStatus;
+    page?: number;
+    size?: number;
+  }) =>
+    api.get<ApiResponse<Page<PurchaseOrderSummary>>>("/admin/purchase-orders", {
+      params: {
+        status: params?.status,
+        page: params?.page ?? 0,
+        size: params?.size ?? 15,
+      },
+    }),
+
+  detail: (id: number, unrestricted = false) =>
+    api.get<ApiResponse<PurchaseOrderDetail>>(`/admin/purchase-orders/${id}`, {
+      params: unrestricted ? { unrestricted: true } : undefined,
+    }),
+
+  create: (body: PurchaseOrderCreateRequest) =>
+    api.post<ApiResponse<PurchaseOrderDetail>>("/admin/purchase-orders", body),
+
+  approve: (id: number) =>
+    api.post<ApiResponse<PurchaseOrderSummary>>(`/admin/purchase-orders/${id}/approve`),
+
+  reject: (id: number, body: { rejectReason: string }) =>
+    api.post<ApiResponse<PurchaseOrderSummary>>(`/admin/purchase-orders/${id}/reject`, body),
+
+  startReceiving: (id: number) =>
+    api.post<ApiResponse<PurchaseOrderSummary>>(`/admin/purchase-orders/${id}/start-receiving`),
+};
+
+export const adminSupplierApi = {
+  list: () => api.get<ApiResponse<SupplierOption[]>>("/admin/suppliers"),
+};
+
+// ─── Inventory audit (warehouse kiểm kê) ────────────────────────────────────
+
+export type InventoryAuditFeStatus =
+  | "in_progress"
+  | "reconciled"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "draft"
+  | "submitted";
+
+export interface InventoryAuditReconciliationLine {
+  variantId?: number;
+  productName?: string;
+  variantName?: string;
+  skuCode?: string;
+  systemQty: number;
+  actualQty: number;
+  variance: number;
+  status: "MATCHED" | "SHORTAGE" | "SURPLUS" | string;
+}
+
+export interface InventoryAuditDiscrepancy {
+  serial: string;
+  type: "MISSING" | "SURPLUS" | "MISPLACED" | string;
+  productName?: string;
+  skuCode?: string;
+  expectedLocation?: string;
+  scannedLocation?: string;
+  message?: string;
+}
+
+export interface InventoryAuditSheet {
+  id: number;
+  code: string;
+  createdAt: string;
+  productTypeId?: number;
+  categoryName?: string;
+  scanned: number;
+  expected: number;
+  matched: number;
+  missing: number;
+  surplus: number;
+  variance: number;
+  status: InventoryAuditFeStatus;
+  note?: string;
+  rejectReason?: string;
+  retailLocked?: boolean;
+  wizardStep?: number;
+  scannedCodes?: string[];
+  missingCodes?: string[];
+  surplusCodes?: string[];
+  lines?: InventoryAuditReconciliationLine[];
+  discrepancies?: InventoryAuditDiscrepancy[];
+  createdByName?: string;
+  approvedByName?: string;
+}
+
+export interface InventoryAuditStats {
+  inProgressCount: number;
+  pendingApprovalCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  draftCount?: number;
+  submittedCount?: number;
+}
+
+export interface InventoryAuditScanResult {
+  code: string;
+  resultType: string;
+  message: string;
+  productName?: string;
+  skuCode?: string;
+  expectedLocation?: string;
+  scannedLocation?: string;
+  totalScanned?: number;
+}
+
+export interface InventoryAuditBulkScanResult {
+  total: number;
+  matched: number;
+  surplus: number;
+  duplicate: number;
+  misplacement: number;
+  totalScanned: number;
+  results: InventoryAuditScanResult[];
+}
+
+export interface InventoryAuditScanProgress {
+  totalScanned: number;
+  expectedCount: number;
+  hideSystemQty: boolean;
+  lines: {
+    variantId?: number;
+    productName?: string;
+    variantName?: string;
+    skuCode?: string;
+    actualQty: number;
+  }[];
+}
+
+export const adminInventoryAuditApi = {
+  list: () => api.get<ApiResponse<InventoryAuditSheet[]>>("/admin/inventory-audit"),
+
+  recent: () => api.get<ApiResponse<InventoryAuditSheet[]>>("/admin/inventory-audit/recent"),
+
+  stats: () => api.get<ApiResponse<InventoryAuditStats>>("/admin/inventory-audit/stats"),
+
+  pending: () =>
+    api.get<ApiResponse<InventoryAuditSheet[]>>("/admin/inventory-audit/pending"),
+
+  processed: () =>
+    api.get<ApiResponse<InventoryAuditSheet[]>>("/admin/inventory-audit/processed"),
+
+  get: (id: number) =>
+    api.get<ApiResponse<InventoryAuditSheet>>(`/admin/inventory-audit/${id}`),
+
+  scanProgress: (id: number) =>
+    api.get<ApiResponse<InventoryAuditScanProgress>>(
+      `/admin/inventory-audit/${id}/scan-progress`
+    ),
+
+  start: (body: { productTypeId: number; note?: string; retailLocked?: boolean }) =>
+    api.post<ApiResponse<InventoryAuditSheet>>("/admin/inventory-audit/start", body),
+
+  scan: (id: number, body: { code: string; shelfLocation?: string }) =>
+    api.post<ApiResponse<InventoryAuditScanResult>>(`/admin/inventory-audit/${id}/scan`, body),
+
+  bulkScan: (id: number, body: { codes: string[] }) =>
+    api.post<ApiResponse<InventoryAuditBulkScanResult>>(
+      `/admin/inventory-audit/${id}/bulk-scan`,
+      body
+    ),
+
+  complete: (id: number) =>
+    api.post<ApiResponse<{ sheet: InventoryAuditSheet; summary: string }>>(
+      `/admin/inventory-audit/${id}/complete`
+    ),
+
+  submit: (id: number, body?: { note?: string }) =>
+    api.post<ApiResponse<InventoryAuditSheet>>(`/admin/inventory-audit/${id}/submit`, body ?? {}),
+
+  approve: (id: number) =>
+    api.post<ApiResponse<InventoryAuditSheet>>(`/admin/inventory-audit/${id}/approve`),
+
+  reject: (id: number, body?: { reason?: string }) =>
+    api.post<ApiResponse<InventoryAuditSheet>>(`/admin/inventory-audit/${id}/reject`, body ?? {}),
+
+  updateNote: (id: number, note: string) =>
+    api.patch<ApiResponse<InventoryAuditSheet>>(`/admin/inventory-audit/${id}/note`, { note }),
+
+  /** @deprecated */
+  create: (body: { scannedCodes: string[]; note?: string }) =>
+    api.post<ApiResponse<InventoryAuditSheet>>("/admin/inventory-audit", body),
 };
 
 // ─── IMEI / Serial (adminImeiApi) ─────────────────────────────────────────
@@ -1215,6 +1512,7 @@ export interface AdminOrderDetail extends AdminOrderSummary {
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    assignedImeis?: string[];
   }[];
   timeline?: { status: string; note?: string; changedBy?: string; createdAt?: string }[];
 }

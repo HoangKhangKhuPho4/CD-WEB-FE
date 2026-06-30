@@ -59,6 +59,33 @@ export const salesCatalogLinks: NavLink[] = [
 /** Quyền quản lý catalog — ADMIN (PRODUCT_MANAGE) hoặc kho (CREATE/UPDATE). */
 const catalogManagePermissions = ["PRODUCT_MANAGE", "PRODUCT_CREATE", "PRODUCT_UPDATE"];
 
+/** Tab xử lý hàng hoàn — trạm kiểm định QC. */
+export const INVENTORY_RETURN_HREF = "/admin/return";
+
+/** Thu mua & nhập hàng từ NCC — nhóm menu sidebar Admin. */
+export const procurementLinks: NavLink[] = [
+  {
+    label: "Quản lý mua hàng",
+    href: "/admin/procurement",
+    permissions: ["PRODUCT_MANAGE", "STOCK_IMPORT"],
+  },
+  {
+    label: "Duyệt chứng từ",
+    href: "/admin/po-management",
+    permissions: ["PRODUCT_MANAGE", "ROLE_ADMIN"],
+  },
+  {
+    label: "Duyệt phiếu kiểm kê",
+    href: "/admin/inventory-audit-approval",
+    permissions: ["PRODUCT_MANAGE", "ROLE_ADMIN"],
+  },
+  {
+    label: "Đơn mua hàng",
+    href: "/admin/purchase-orders",
+    permissions: ["STOCK_IMPORT"],
+  },
+];
+
 export const inventoryLinks: NavLink[] = [
   {
     label: "Sản phẩm",
@@ -74,23 +101,62 @@ export const inventoryLinks: NavLink[] = [
     permissions: ["STOCK_IMPORT", "INVENTORY_STAT"],
   },
   { label: "Mã giảm giá", href: "/admin/coupons", permissions: ["PRODUCT_MANAGE"] },
-  { label: "Quản lý IMEI", href: "/admin/imei", permissions: ["IMEI_MANAGE"] },
-  { label: "Trả hàng nhập kho", href: "/admin/return", permissions: ["STOCK_RETURN"] },
+  { label: "Quản lý IMEI", href: "/admin/imei", permissions: ["IMEI_MANAGE", "STOCK_IMPORT"] },
+  {
+    label: "Xử lý hàng hoàn",
+    href: INVENTORY_RETURN_HREF,
+    permissions: ["STOCK_RETURN"],
+  },
+  ...procurementLinks,
 ];
 
-/** Menu kho — khớp 11 quyền WAREHOUSE trong DB (không coupon, không trả hàng). */
-export const warehouseInventoryLinks: NavLink[] = [
-  { label: "Sản phẩm", href: "/admin/products", permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE"] },
-  { label: "Danh mục", href: "/admin/categories", permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE"] },
-  { label: "Thương hiệu", href: "/admin/producers", permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE"] },
-  { label: "Thuộc tính", href: "/admin/attributes", permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE"] },
+/** Menu kho — khớp quyền WAREHOUSE trong cd_web.sql (11 quyền). */
+export const warehouseOpsLinks: NavLink[] = [
+  {
+    label: "Đơn cần xuất",
+    href: "/admin/warehouse-fulfillment",
+    permissions: ["ORDER_VIEW_ALL", "ORDER_ASSIGN_SHIPPING"],
+  },
+  {
+    label: "Đơn mua hàng",
+    href: "/admin/purchase-orders",
+    permissions: ["STOCK_IMPORT"],
+  },
   {
     label: "Nhập / Tồn kho",
     href: "/admin/inventory",
     permissions: ["STOCK_IMPORT", "INVENTORY_STAT"],
   },
-  { label: "Quản lý IMEI", href: "/admin/imei", permissions: ["IMEI_MANAGE"] },
+  {
+    label: "Kiểm kê kho",
+    href: "/admin/inventory-audit",
+    permissions: ["INVENTORY_STAT", "STOCK_IMPORT"],
+  },
+  { label: "Quản lý IMEI", href: "/admin/imei", permissions: ["IMEI_MANAGE", "STOCK_IMPORT"] },
+  {
+    label: "Xử lý hàng hoàn",
+    href: INVENTORY_RETURN_HREF,
+    permissions: ["STOCK_RETURN"],
+  },
 ];
+
+/** @deprecated NV kho không quản lý catalog — giữ export rỗng để tương thích import cũ. */
+export const warehouseCatalogLinks: NavLink[] = [];
+
+/** @deprecated NV kho không quản lý phiếu bảo hành — giữ export rỗng tương thích import cũ. */
+export const warehouseWarrantyLinks: NavLink[] = [];
+
+export function procurementSubNavLinks(user: RbacUser | null | undefined): NavLink[] {
+  return filterNavLinks(user, procurementLinks);
+}
+
+/** Sub-nav trang kho — lọc theo user. */
+export function warehouseSubNavLinks(user: RbacUser | null | undefined): NavLink[] {
+  return filterNavLinks(user, warehouseOpsLinks);
+}
+
+/** @deprecated dùng warehouseCatalogLinks */
+export const warehouseInventoryLinks: NavLink[] = warehouseCatalogLinks;
 
 export const supportLinks: NavLink[] = [
   { label: "Quản lý phiếu bảo hành", href: "/admin/warranty", permissions: ["WARRANTY_MANAGE"] },
@@ -161,12 +227,10 @@ const salesSectionDefs: NavSection[] = [
   { title: "Phiếu bảo hành", items: warrantyTicketLinks },
 ];
 
-/** Menu gọn cho WAREHOUSE — khớp thiết kế DB (11 quyền). */
+/** Menu gọn cho WAREHOUSE — theo mô hình electro-store + quyền cd_web.sql. */
 const warehouseSectionDefs: NavSection[] = [
-  { title: "Tổng quan", items: [{ label: "Tổng quan", href: "/admin" }] },
-  { title: "Đơn hàng & Xuất kho", items: orderLinks },
-  { title: "Sản phẩm & Kho", items: warehouseInventoryLinks },
-  { title: "Phiếu bảo hành", items: warrantyTicketLinks },
+  { title: "Tổng quan", items: [{ label: "Tổng quan kho", href: "/admin" }] },
+  { title: "Xuất kho & Nhập kho", items: warehouseOpsLinks },
 ];
 
 /** Sub-nav catalog — menu kho gọn, admin đầy đủ. */
@@ -174,14 +238,15 @@ export function catalogSubNavLinks(user: RbacUser | null | undefined): NavLink[]
   const isWarehouse =
     user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "WAREHOUSE") ?? false;
   const isSales = user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "SALES") ?? false;
-  if (isWarehouse && !isSales) return warehouseInventoryLinks;
+  if (isWarehouse && !isSales) return warehouseOpsLinks;
   return inventoryLinks;
 }
 
 export function matchNavHref(pathname: string, href: string) {
-  if (href === "/admin") return pathname === "/admin";
-  if (href.startsWith("/shop")) return false;
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const baseHref = href.split("?")[0];
+  if (baseHref === "/admin") return pathname === "/admin";
+  if (baseHref.startsWith("/shop")) return false;
+  return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
 }
 
 export function filterNavLinks(user: RbacUser | null | undefined, items: NavLink[]): NavLink[] {

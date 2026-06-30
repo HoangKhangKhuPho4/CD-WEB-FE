@@ -5,6 +5,7 @@ import { useOrdersAdmin } from "@/components/Admin/Orders/ordersAdminStore";
 const statuses = [
   { value: "", label: "Tất cả trạng thái" },
   { value: "PENDING", label: "Chờ xác nhận" },
+  { value: "CONFIRMED", label: "Đã xác nhận" },
   { value: "PROCESSING", label: "Đang xử lý" },
   { value: "SHIPPING", label: "Đang giao" },
   { value: "DELIVERED", label: "Đã giao" },

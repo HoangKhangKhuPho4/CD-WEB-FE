@@ -9,6 +9,7 @@ import {
   buildSidebarSections,
   canAccessAdminSettings,
   getStaffPortalSubtitle,
+  INVENTORY_RETURN_HREF,
   matchNavHref,
   type NavLink,
 } from "@/components/Admin/adminNavConfig";
@@ -86,6 +87,50 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <path d="M5 5L2.5 7.5L5 10M2.5 7.5H12.5C14.1569 7.5 15.5 8.84315 15.5 10.5V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  "/admin/warehouse-fulfillment": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M6.66667 9.16667V5.83333C6.66667 4.94928 7.01786 4.10143 7.64298 3.47631C8.2681 2.85119 9.11595 2.5 10 2.5C10.884 2.5 11.7319 2.85119 12.357 3.47631C12.9821 4.10143 13.3333 4.94928 13.3333 5.83333V9.16667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.33333 7.5H16.6667L17.5 17.5H2.5L3.33333 7.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  "/admin/purchase-orders": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M5 3.33333H15C15.4602 3.33333 15.8333 3.70643 15.8333 4.16667V16.6667C15.8333 17.1269 15.4602 17.5 15 17.5H5C4.53976 17.5 4.16667 17.1269 4.16667 16.6667V4.16667C4.16667 3.70643 4.53976 3.33333 5 3.33333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 7.5H12.5M7.5 10.8333H12.5M7.5 14.1667H10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  "/admin/procurement": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M5 3.33333H15C15.4602 3.33333 15.8333 3.70643 15.8333 4.16667V16.6667C15.8333 17.1269 15.4602 17.5 15 17.5H5C4.53976 17.5 4.16667 17.1269 4.16667 16.6667V4.16667C4.16667 3.70643 4.53976 3.33333 5 3.33333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 7.5H12.5M7.5 10.8333H12.5M7.5 14.1667H10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  "/admin/po-management": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M5 3.33333H15C15.4602 3.33333 15.8333 3.70643 15.8333 4.16667V16.6667C15.8333 17.1269 15.4602 17.5 15 17.5H5C4.53976 17.5 4.16667 17.1269 4.16667 16.6667V4.16667C4.16667 3.70643 4.53976 3.33333 5 3.33333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 7.5H12.5M7.5 10.8333H12.5M7.5 14.1667H10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  "/admin/inventory-audit-approval": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M7.5 2.5H3.33333V8.33333H7.5V2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.6667 2.5H12.5V8.33333H16.6667V2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.33333 11.6667H16.6667V17.5H3.33333V11.6667Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.33333 14.1667L9.58333 15.4167L12.0833 12.9167" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  "/admin/inventory-audit": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M7.5 2.5H3.33333V8.33333H7.5V2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.6667 2.5H12.5V8.33333H16.6667V2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.33333 11.6667H16.6667V17.5H3.33333V11.6667Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  "/admin/warranty-inbound": (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <path d="M10 2.5L3.75 5.41667V9.58333C3.75 13.125 6.45833 16.4583 10 17.9167C13.5417 16.4583 16.25 13.125 16.25 9.58333V5.41667L10 2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   "/admin/warranty": (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
       <path d="M10 2.5L3.75 5.41667V9.58333C3.75 13.125 6.45833 16.4583 10 17.9167C13.5417 16.4583 16.25 13.125 16.25 9.58333V5.41667L10 2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -123,7 +168,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 };
 
 function navIcon(item: NavLink) {
-  return NAV_ICONS[item.href] ?? NAV_ICONS["/admin"];
+  const baseHref = item.href.split("?")[0];
+  return NAV_ICONS[item.href] ?? NAV_ICONS[baseHref] ?? NAV_ICONS["/admin"];
 }
 
 function NavItemLink({

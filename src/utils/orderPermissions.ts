@@ -37,7 +37,12 @@ export function canUpdateOrderStatus(user: RbacUser | null | undefined): boolean
   );
 }
 
-/** Trạng thái tiếp theo — PENDING→…→DELIVERED→COMPLETED (+ CANCELLED). */
+/** Nhân viên kho thuần: chỉ fulfillment sau khi Sales xác nhận. */
+function isWarehouseFulfillmentUser(user: RbacUser | null | undefined): boolean {
+  return canAssignShipping(user) && !canConfirmOrder(user) && !hasPermission(user, "ORDER_MANAGE");
+}
+
+/** Trạng thái tiếp theo theo vai trò. */
 export function allowedNextStatuses(
   current: string,
   user: RbacUser | null | undefined
@@ -45,10 +50,27 @@ export function allowedNextStatuses(
   const cur = current.toUpperCase();
   const options: string[] = [];
 
+  if (isWarehouseFulfillmentUser(user)) {
+    if (cur === "CONFIRMED") options.push("PROCESSING");
+    if (cur === "PROCESSING") {
+      options.push("SHIPPING");
+      if (canCancelOrder(user)) options.push("CANCELLED");
+    }
+    if (cur === "SHIPPING") {
+      if (canUpdateTracking(user)) options.push("DELIVERED");
+      if (canCancelOrder(user)) options.push("CANCELLED");
+    }
+    if (cur === "DELIVERED" && canUpdateTracking(user)) options.push("COMPLETED");
+    return options;
+  }
+
   if (cur === "PENDING" && canConfirmOrder(user)) {
     options.push("CONFIRMED");
   }
-  if ((cur === "CONFIRMED" || cur === "PROCESSING") && canAssignShipping(user)) {
+  if (cur === "CONFIRMED" && canAssignShipping(user)) {
+    options.push("PROCESSING", "SHIPPING");
+  }
+  if (cur === "PROCESSING" && canAssignShipping(user)) {
     options.push("SHIPPING");
   }
   if (cur === "SHIPPING" && canUpdateTracking(user)) {
@@ -57,18 +79,25 @@ export function allowedNextStatuses(
   if (cur === "DELIVERED" && canUpdateTracking(user)) {
     options.push("COMPLETED");
   }
-  if (canCancelOrder(user) && cur !== "CANCELLED" && cur !== "DELIVERED") {
+  if (
+    canCancelOrder(user) &&
+    cur !== "CANCELLED" &&
+    cur !== "DELIVERED" &&
+    cur !== "COMPLETED"
+  ) {
     options.push("CANCELLED");
   }
-  return options;
+  return Array.from(new Set(options));
 }
 
 export function isSalesStaff(user: RbacUser | null | undefined): boolean {
-  return (
-    user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "SALES") ?? false
-  );
+  return user?.roles?.some((r) => (r.name ?? "").toUpperCase() === "SALES") ?? false;
 }
 
 export function hasSalesReport(user: RbacUser | null | undefined): boolean {
   return hasPermission(user, "REPORT_SALES");
+}
+
+export function canAccessFulfillmentQueue(user: RbacUser | null | undefined): boolean {
+  return hasAnyPermission(user, ["ORDER_VIEW_ALL", "ORDER_ASSIGN_SHIPPING"]);
 }

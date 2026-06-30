@@ -132,6 +132,8 @@ Chi tiết stack backend: [README Backend](https://github.com/HoangKhangKhuPho4/
 
 ## 5. Hướng dẫn cài đặt và chạy (Getting Started)
 
+> **Hướng dẫn đầy đủ Backend + Frontend:** [CD-WEB-BE — HUONG_DAN_CAI_DAT.md](https://github.com/HoangKhangKhuPho4/CD-WEB-BE/blob/main/docs/HUONG_DAN_CAI_DAT.md)
+
 ### Yêu cầu hệ thống
 
 - **Node.js** 20.x (khuyến nghị)
@@ -194,15 +196,18 @@ Mở trình duyệt: **http://localhost:3000**
 | `npm run start` | Chạy bản build |
 | `npm run lint` | ESLint |
 
-### Tài khoản demo (sau seed backend)
+### Tài khoản demo
 
-| Username | Vai trò |
-|----------|---------|
-| `admin` | Quản trị viên |
-| `sales` | Nhân viên bán hàng |
-| `warehouse` | Nhân viên kho |
+| Username | Vai trò | Ghi chú |
+|----------|---------|---------|
+| `admin` | Quản trị viên | Mật khẩu theo DB nhóm (Postman: `admin123`) |
+| `sales` | Nhân viên bán hàng | |
+| `warehouse` | Nhân viên kho | |
+| `luutien` | Khách hàng test | Postman: `123456` |
 
-Đăng nhập admin: **http://localhost:3000/signin** → redirect `/admin` nếu có quyền staff.
+Đăng nhập: **http://localhost:3000/signin** → redirect `/admin` nếu có quyền staff.
+
+Xem thêm: [Hướng dẫn cài đặt đầy đủ (BE)](https://github.com/HoangKhangKhuPho4/CD-WEB-BE/blob/main/docs/HUONG_DAN_CAI_DAT.md).
 
 ---
 

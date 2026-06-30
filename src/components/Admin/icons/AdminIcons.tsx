@@ -242,6 +242,203 @@ export function IconQrCode(props: IconProps) {
   );
 }
 
+export function IconUpload(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M10 3.33333V12.5M10 3.33333L6.66667 6.66667M10 3.33333L13.3333 6.66667"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.16667 12.5V15.8333C4.16667 16.7538 4.91286 17.5 5.83333 17.5H14.1667C15.0871 17.5 15.8333 16.7538 15.8333 15.8333V12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  );
+}
+
+export function IconScanBarcode(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M4.16667 5H5.83333V15H4.16667V5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M7.5 5H8.33333V15H7.5V5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M10 5H11.6667V15H10V5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M13.3333 5H14.1667V15H13.3333V5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M15.8333 5H16.6667V15H15.8333V5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </SvgIcon>
+  );
+}
+
+export function IconImport(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M10 12.5V3.33333M10 12.5L7.08333 9.58333M10 12.5L12.9167 9.58333"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.33333 12.5V15.8333C3.33333 16.7538 4.07953 17.5 5 17.5H15C15.9205 17.5 16.6667 16.7538 16.6667 15.8333V12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  );
+}
+
+export function IconAlertTriangle(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M10 3.75L17.0833 15.8333H2.91667L10 3.75Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M10 8.33333V11.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10" cy="13.75" r="0.75" fill="currentColor" />
+    </SvgIcon>
+  );
+}
+
+export function IconPrint(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M5.83333 7.5H14.1667V3.33333H5.83333V7.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.83333 12.5H4.16667C3.24619 12.5 2.5 11.7538 2.5 10.8333V8.33333C2.5 7.41286 3.24619 6.66667 4.16667 6.66667H15.8333C16.7538 6.66667 17.5 7.41286 17.5 8.33333V10.8333C17.5 11.7538 16.7538 12.5 15.8333 12.5H14.1667"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M5.83333 12.5V16.6667H14.1667V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </SvgIcon>
+  );
+}
+
+export function IconSend(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M17.5 2.5L9.16667 10.8333"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.5 2.5L12.0833 17.5L9.16667 10.8333L2.5 7.91667L17.5 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  );
+}
+
+export function IconX(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </SvgIcon>
+  );
+}
+
+export function IconCheck(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M5.83333 10L8.75 12.9167L14.1667 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </SvgIcon>
+  );
+}
+
+export function IconTruck(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M2.5 13.3333H3.33333M13.3333 13.3333H14.1667M3.33333 13.3333V8.33333H10.8333V13.3333M13.3333 13.3333V10.8333L16.6667 8.33333H13.3333"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2.5 8.33333L5 5.83333H10.8333L13.3333 8.33333"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="5.83333" cy="13.3333" r="1.66667" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="12.5" cy="13.3333" r="1.66667" stroke="currentColor" strokeWidth="1.5" />
+    </SvgIcon>
+  );
+}
+
+export function IconReturn(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path
+        d="M5 5L2.5 7.5L5 10M2.5 7.5H12.5C14.1569 7.5 15.5 8.84315 15.5 10.5V12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  );
+}
+
+export function StatusDot({ color }: { color: "green" | "red" | "yellow" }) {
+  const cls =
+    color === "green"
+      ? "bg-green"
+      : color === "red"
+        ? "bg-red"
+        : "bg-yellow-dark-2";
+  return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${cls}`} aria-hidden />;
+}
+
+export function InventoryAuditStatusLabel({ status }: { status: string }) {
+  if (status === "MATCHED") {
+    return (
+      <span className="inline-flex items-center justify-center gap-1.5">
+        <StatusDot color="green" />
+        Khớp
+      </span>
+    );
+  }
+  if (status === "SHORTAGE") {
+    return (
+      <span className="inline-flex items-center justify-center gap-1.5">
+        <StatusDot color="red" />
+        Thiếu
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center justify-center gap-1.5">
+      <StatusDot color="yellow" />
+      Thừa
+    </span>
+  );
+}
+
 export function IconSparkles(props: IconProps) {
   return (
     <SvgIcon {...props}>

@@ -435,6 +435,14 @@ const OrderDetailModal = ({
                       <p className="text-xs text-gray-500 mt-0.5">
                         x{orderItem.quantity}
                       </p>
+                      {(orderItem.assignedImeis?.length ?? 0) > 0 && (
+                        <p className="text-xs mt-1">
+                          <span className="text-gray-500">Mã Serial / IMEI:</span>{" "}
+                          <span className="font-mono font-semibold text-blue">
+                            {orderItem.assignedImeis!.join(", ")}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-medium text-dark text-sm">

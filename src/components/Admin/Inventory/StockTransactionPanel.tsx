@@ -12,6 +12,7 @@ import {
   formatVariantLabel,
   TX_TYPE_OPTIONS,
   txTypeLabel,
+  txTypeBadgeClass,
 } from "@/components/Admin/Inventory/inventoryUtils";
 import {
   adminInventoryApi,
@@ -195,7 +196,18 @@ export default function StockTransactionPanel() {
                   className="hover:bg-[#F7F9FC]/50 cursor-pointer"
                   onClick={() => setDetailId(tx.id)}
                 >
-                  <td className="px-4 py-3 text-sm">{txTypeLabel(tx.transactionType)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ${txTypeBadgeClass(tx.transactionType)}`}
+                    >
+                      {txTypeLabel(tx.transactionType)}
+                    </span>
+                    {tx.referenceType === "PURCHASE_ORDER" && tx.referenceId && (
+                      <span className="block text-[10px] text-[#8D93A5] mt-1">
+                        PO #{tx.referenceId}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm">{tx.variantName ?? tx.skuCode ?? "—"}</td>
                   <td className="px-4 py-3 text-sm text-center">{tx.quantity}</td>
                   <td className="px-4 py-3 text-sm text-[#6C6F93] max-w-[200px] truncate">

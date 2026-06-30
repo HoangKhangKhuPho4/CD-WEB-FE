@@ -32,6 +32,10 @@ export function canInventoryStat(user: RbacUser | null | undefined): boolean {
   return hasAnyPermission(user, ["INVENTORY_STAT", "ROLE_ADMIN"]);
 }
 
+export function canApproveInventoryAudit(user: RbacUser | null | undefined): boolean {
+  return hasAnyPermission(user, ["PRODUCT_MANAGE", "ROLE_ADMIN"]);
+}
+
 export function canManageImei(user: RbacUser | null | undefined): boolean {
   return hasAnyPermission(user, ["IMEI_MANAGE", "ROLE_ADMIN"]);
 }

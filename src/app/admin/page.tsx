@@ -12,9 +12,10 @@ import PaymentMethods from "@/components/Admin/Dashboard/PaymentMethods";
 import BestSellingProducts from "@/components/Admin/Dashboard/BestSellingProducts";
 import LowStockProducts from "@/components/Admin/Dashboard/LowStockProducts";
 import StaffDashboard from "@/components/Admin/Dashboard/StaffDashboard";
+import WarehouseDashboard from "@/components/Admin/Dashboard/WarehouseDashboard";
 import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
 import type { RootState } from "@/redux/store";
-import { hasPermission, isAdminUser } from "@/utils/rbac";
+import { hasPermission, isAdminUser, isWarehouseOnlyUser } from "@/utils/rbac";
 import {
   resolveAnalyticsDateRange,
   type AnalyticsTimeFilter,
@@ -87,6 +88,10 @@ export default function AdminDashboardPage() {
   const user = useSelector((s: RootState) => s.authReducer.user);
   const showRevenueDashboard =
     isAdminUser(user) || hasPermission(user, "REPORT_REVENUE");
+
+  if (isWarehouseOnlyUser(user)) {
+    return <WarehouseDashboard />;
+  }
 
   if (!showRevenueDashboard) {
     return <StaffDashboard />;

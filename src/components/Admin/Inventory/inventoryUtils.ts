@@ -34,3 +34,20 @@ export const TX_TYPE_OPTIONS: { value: InventoryTransactionType | ""; label: str
 export function txTypeLabel(type?: string): string {
   return TX_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type ?? "—";
 }
+
+export function txTypeBadgeClass(type?: string): string {
+  switch (type) {
+    case "IMPORT":
+      return "bg-green-light-6 text-green";
+    case "EXPORT":
+      return "bg-[#FEE2E2] text-[#DC2626]";
+    case "RETURN":
+      return "bg-[#EEF2FF] text-[#3C50E0]";
+    case "ADJUSTMENT":
+      return "bg-[#FFF9EB] text-yellow-dark-2";
+    case "TRANSFER":
+      return "bg-[#F3E8FF] text-[#7C3AED]";
+    default:
+      return "bg-gray-2 text-[#6C6F93]";
+  }
+}
