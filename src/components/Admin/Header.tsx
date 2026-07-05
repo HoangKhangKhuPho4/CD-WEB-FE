@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "@/redux/store";
 import { logout } from "@/redux/features/auth-slice";
+import { logoutSession } from "@/utils/authApi";
 import UserAvatar, { getStaffAvatarGradient } from "@/components/Admin/shared/UserAvatar";
 import {
   getStaffRoleLabel,
@@ -27,7 +28,8 @@ export default function AdminHeader() {
       ? "Tìm kiếm hệ thống..."
       : "Tìm kiếm nhanh...";
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutSession();
     dispatch(logout());
     router.replace("/signin");
   };

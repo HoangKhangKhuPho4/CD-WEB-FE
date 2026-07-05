@@ -10,6 +10,7 @@ const rawBase =
 /** Client gọi /api/auth/** — không gắn interceptor 401 redirect của api chính */
 export const authApiClient = axios.create({
   baseURL: `${rawBase}/api`,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -154,6 +155,26 @@ export async function resetPassword(
     throw err;
   }
   return body;
+}
+
+/** Thu hồi token phía server (Redis blacklist + xóa refresh cookie) rồi xóa storage phía client */
+export async function logoutSession(): Promise<void> {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("token") ?? sessionStorage.getItem("token")
+      : null;
+  try {
+    await authApiClient.post(
+      "/auth/logout",
+      {},
+      {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
+  } catch {
+    // Vẫn xóa storage phía client nếu server lỗi
+  }
 }
 
 export function getAuthErrorMessage(err: unknown): string {

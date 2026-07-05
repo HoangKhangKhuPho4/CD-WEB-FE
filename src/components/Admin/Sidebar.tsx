@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { logout } from "@/redux/features/auth-slice";
+import { logoutSession } from "@/utils/authApi";
 import {
   buildSidebarSections,
   canAccessAdminSettings,
@@ -223,7 +224,8 @@ export default function AdminSidebar() {
 
   const visibleSections = useMemo(() => buildSidebarSections(user), [user]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutSession();
     dispatch(logout());
     router.replace("/signin");
   };

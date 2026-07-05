@@ -9,6 +9,7 @@ import MyReviewsPanel from "./MyReviewsPanel";
 import { useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import { logout, updateUser } from "@/redux/features/auth-slice";
+import { logoutSession } from "@/utils/authApi";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getMe } from "@/utils/userApi";
 
@@ -36,7 +37,8 @@ const MyAccount = () => {
 
   const avatarSrc = user?.avatarUrl || "/images/users/user-04.jpg";
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutSession();
     dispatch(logout());
     router.push("/signin");
   };

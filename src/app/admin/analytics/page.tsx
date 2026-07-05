@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import StatsCards from "@/components/Admin/Dashboard/StatsCards";
@@ -14,20 +14,23 @@ import CustomerSegmentsPanel from "@/components/Admin/Dashboard/CustomerSegments
 import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
 import PageHeader from "@/components/Admin/shared/PageHeader";
 import SalesAnalyticsPage from "@/components/Admin/Dashboard/SalesAnalyticsPage";
+import { useAnalyticsTimeRange } from "@/hooks/useAnalyticsTimeRange";
 import type { RootState } from "@/redux/store";
 import { hasPermission, isAdminUser } from "@/utils/rbac";
-import {
-  resolveAnalyticsDateRange,
-  type AnalyticsTimeFilter,
-} from "@/utils/analyticsDateRange";
 import { downloadRevenueReportCsv } from "@/utils/exportRevenueReport";
 
-const timeFilters: AnalyticsTimeFilter[] = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
-
 function RevenueAnalyticsPage() {
-  const [activeFilter, setActiveFilter] = useState<AnalyticsTimeFilter>("30 ngày");
+  const {
+    activeFilter,
+    customFromDate,
+    customToDate,
+    setCustomFromDate,
+    setCustomToDate,
+    dateRange,
+    handleFilterChange,
+    filters,
+  } = useAnalyticsTimeRange();
   const [exporting, setExporting] = useState(false);
-  const dateRange = useMemo(() => resolveAnalyticsDateRange(activeFilter), [activeFilter]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -49,10 +52,14 @@ function RevenueAnalyticsPage() {
         action={
           <AnalyticsTimeToolbar
             activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
+            onFilterChange={handleFilterChange}
+            customFromDate={customFromDate}
+            customToDate={customToDate}
+            onCustomFromDateChange={setCustomFromDate}
+            onCustomToDateChange={setCustomToDate}
             onExport={() => void handleExport()}
             exporting={exporting}
-            filters={timeFilters}
+            filters={filters}
           />
         }
       />

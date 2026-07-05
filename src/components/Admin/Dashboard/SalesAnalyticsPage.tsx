@@ -1,22 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import OrderStatusChart from "@/components/Admin/Dashboard/OrderStatusChart";
 import RecentOrders from "@/components/Admin/Dashboard/RecentOrders";
 import BestSellingProducts from "@/components/Admin/Dashboard/BestSellingProducts";
 import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
 import PageHeader from "@/components/Admin/shared/PageHeader";
-import {
-  resolveAnalyticsDateRange,
-  type AnalyticsTimeFilter,
-} from "@/utils/analyticsDateRange";
-
-const timeFilters: AnalyticsTimeFilter[] = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
+import { useAnalyticsTimeRange } from "@/hooks/useAnalyticsTimeRange";
 
 /** Báo cáo bán hàng — khớp quyền REPORT_SALES (không doanh thu / export). */
 export default function SalesAnalyticsPage() {
-  const [activeFilter, setActiveFilter] = useState<AnalyticsTimeFilter>("30 ngày");
-  const dateRange = useMemo(() => resolveAnalyticsDateRange(activeFilter), [activeFilter]);
+  const {
+    activeFilter,
+    customFromDate,
+    customToDate,
+    setCustomFromDate,
+    setCustomToDate,
+    dateRange,
+    handleFilterChange,
+    filters,
+  } = useAnalyticsTimeRange();
 
   return (
     <div className="space-y-6">
@@ -26,9 +28,13 @@ export default function SalesAnalyticsPage() {
         action={
           <AnalyticsTimeToolbar
             activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
+            onFilterChange={handleFilterChange}
+            customFromDate={customFromDate}
+            customToDate={customToDate}
+            onCustomFromDateChange={setCustomFromDate}
+            onCustomToDateChange={setCustomToDate}
             showExport={false}
-            filters={timeFilters}
+            filters={filters}
           />
         }
       />

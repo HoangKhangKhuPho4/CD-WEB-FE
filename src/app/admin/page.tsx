@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import StatsCards from "@/components/Admin/Dashboard/StatsCards";
@@ -14,20 +14,23 @@ import LowStockProducts from "@/components/Admin/Dashboard/LowStockProducts";
 import StaffDashboard from "@/components/Admin/Dashboard/StaffDashboard";
 import WarehouseDashboard from "@/components/Admin/Dashboard/WarehouseDashboard";
 import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
+import { useAnalyticsTimeRange } from "@/hooks/useAnalyticsTimeRange";
 import type { RootState } from "@/redux/store";
 import { hasPermission, isAdminUser, isWarehouseOnlyUser } from "@/utils/rbac";
-import {
-  resolveAnalyticsDateRange,
-  type AnalyticsTimeFilter,
-} from "@/utils/analyticsDateRange";
 import { downloadRevenueReportCsv } from "@/utils/exportRevenueReport";
 
-const timeFilters: AnalyticsTimeFilter[] = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
-
 function AdminRevenueDashboard() {
-  const [activeFilter, setActiveFilter] = useState<AnalyticsTimeFilter>("30 ngày");
+  const {
+    activeFilter,
+    customFromDate,
+    customToDate,
+    setCustomFromDate,
+    setCustomToDate,
+    dateRange,
+    handleFilterChange,
+    filters,
+  } = useAnalyticsTimeRange();
   const [exporting, setExporting] = useState(false);
-  const dateRange = useMemo(() => resolveAnalyticsDateRange(activeFilter), [activeFilter]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -43,7 +46,7 @@ function AdminRevenueDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-dark">Tổng quan</h1>
           <p className="text-sm text-[#6C6F93] mt-1">
@@ -52,10 +55,14 @@ function AdminRevenueDashboard() {
         </div>
         <AnalyticsTimeToolbar
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
+          customFromDate={customFromDate}
+          customToDate={customToDate}
+          onCustomFromDateChange={setCustomFromDate}
+          onCustomToDateChange={setCustomToDate}
           onExport={() => void handleExport()}
           exporting={exporting}
-          filters={timeFilters}
+          filters={filters}
         />
       </div>
       <StatsCards dateRange={dateRange} />

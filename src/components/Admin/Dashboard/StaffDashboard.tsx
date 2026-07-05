@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSelector } from "react-redux";
 import {
@@ -9,17 +9,12 @@ import {
 } from "@/utils/adminApi";
 import type { RootState } from "@/redux/store";
 import { hasAnyPermission, hasPermission, isWarehouseOnlyUser } from "@/utils/rbac";
-import {
-  resolveAnalyticsDateRange,
-  type AnalyticsTimeFilter,
-} from "@/utils/analyticsDateRange";
+import { useAnalyticsTimeRange } from "@/hooks/useAnalyticsTimeRange";
 import AnalyticsTimeToolbar from "@/components/Admin/Dashboard/AnalyticsTimeToolbar";
 import OrderStatusChart from "@/components/Admin/Dashboard/OrderStatusChart";
 import RecentOrders from "@/components/Admin/Dashboard/RecentOrders";
 import LowStockProducts from "@/components/Admin/Dashboard/LowStockProducts";
 import BestSellingProducts from "@/components/Admin/Dashboard/BestSellingProducts";
-
-const timeFilters: AnalyticsTimeFilter[] = ["7 ngày", "30 ngày", "Tháng này", "Năm nay"];
 
 function StatCard({
   label,
@@ -50,8 +45,16 @@ function StatCard({
 
 export default function StaffDashboard() {
   const user = useSelector((s: RootState) => s.authReducer.user);
-  const [activeFilter, setActiveFilter] = useState<AnalyticsTimeFilter>("30 ngày");
-  const dateRange = useMemo(() => resolveAnalyticsDateRange(activeFilter), [activeFilter]);
+  const {
+    activeFilter,
+    customFromDate,
+    customToDate,
+    setCustomFromDate,
+    setCustomToDate,
+    dateRange,
+    handleFilterChange,
+    filters,
+  } = useAnalyticsTimeRange();
   const [data, setData] = useState<StaffOverviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,15 +101,16 @@ export default function StaffDashboard() {
       ? "Theo dõi đơn hàng, tồn kho, xuất hàng và quản lý phiếu bảo hành thiết bị."
       : "Theo dõi đơn hàng và công việc cần xử lý trong kỳ đã chọn.";
 
-  const ordersLabel = activeFilter === "7 ngày" || activeFilter === "30 ngày"
-    ? "Đơn trong kỳ"
-    : activeFilter === "Tháng này"
+  const ordersLabel =
+    activeFilter === "Tháng này"
       ? "Đơn tháng này"
-      : "Đơn năm nay";
+      : activeFilter === "Năm nay"
+        ? "Đơn năm nay"
+        : "Đơn trong kỳ";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-dark">{title}</h1>
           <p className="text-sm text-[#6C6F93] mt-1">
@@ -115,9 +119,13 @@ export default function StaffDashboard() {
         </div>
         <AnalyticsTimeToolbar
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
+          customFromDate={customFromDate}
+          customToDate={customToDate}
+          onCustomFromDateChange={setCustomFromDate}
+          onCustomToDateChange={setCustomToDate}
           showExport={false}
-          filters={timeFilters}
+          filters={filters}
         />
       </div>
 
