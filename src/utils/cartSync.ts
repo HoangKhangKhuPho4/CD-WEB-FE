@@ -2,6 +2,8 @@ import { AppDispatch } from "@/redux/store";
 import {
   addItemToCart,
   setCartItems,
+  updateCartItemQuantity,
+  removeItemFromCart,
   type CartItem,
 } from "@/redux/features/cart-slice";
 import { cartService, type Cart, type CartItem as ApiCartItem } from "@/utils/api";
@@ -53,7 +55,6 @@ export async function loadCartFromApi(dispatch: AppDispatch): Promise<void> {
   }
 }
 
-/** Loại sản phẩm khách vãng lai không còn tồn tại / đã ngừng kinh doanh. */
 export async function sanitizeGuestCartItems(
   dispatch: AppDispatch,
   items: CartItem[]
@@ -89,12 +90,10 @@ export async function sanitizeGuestCartItems(
   }
 }
 
-/** Dòng giỏ khách vãng lai (chưa có variantId từ API). */
 export function isGuestCartItem(item: CartItem): boolean {
   return item.variantId == null;
 }
 
-/** Đẩy sản phẩm giỏ khách lên API (resolve variant nếu thiếu). */
 export async function mergeGuestItemsToApi(
   dispatch: AppDispatch,
   guestItems: CartItem[]
@@ -138,6 +137,70 @@ export async function getServerCartItemCount(): Promise<number> {
   }
 }
 
+
+export function updateCartLineQuantityOptimistic(
+  dispatch: AppDispatch,
+  isAuthenticated: boolean,
+  cartLineId: number,
+  newQuantity: number,
+  previousQuantity: number
+): void {
+  if (newQuantity < 1) return;
+
+  dispatch(updateCartItemQuantity({ id: cartLineId, quantity: newQuantity }));
+
+  if (!isAuthenticated) return;
+
+  void (async () => {
+    try {
+      const res = await cartService.updateItem(cartLineId, newQuantity);
+      if (res.data?.success && res.data.data) {
+        dispatch(setCartItems(mapApiCartToReduxItems(res.data.data)));
+      } else {
+        dispatch(updateCartItemQuantity({ id: cartLineId, quantity: previousQuantity }));
+        toast.error(res.data?.message || "Không cập nhật được giỏ hàng");
+      }
+    } catch (err: unknown) {
+      dispatch(updateCartItemQuantity({ id: cartLineId, quantity: previousQuantity }));
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Không cập nhật được giỏ hàng";
+      toast.error(msg);
+    }
+  })();
+}
+
+export function removeCartLineOptimistic(
+  dispatch: AppDispatch,
+  isAuthenticated: boolean,
+  cartLineId: number,
+  itemSnapshot: CartItem 
+): void {
+  dispatch(removeItemFromCart(cartLineId));
+
+  if (!isAuthenticated) return;
+
+  void (async () => {
+    try {
+      const res = await cartService.removeItem(cartLineId);
+      if (res.data?.success && res.data.data) {
+        dispatch(setCartItems(mapApiCartToReduxItems(res.data.data)));
+      } else {
+        dispatch(addItemToCart(itemSnapshot));
+        toast.error(res.data?.message || "Không xóa được sản phẩm");
+      }
+    } catch (err: unknown) {
+      dispatch(addItemToCart(itemSnapshot));
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Không xóa được sản phẩm";
+      toast.error(msg);
+    }
+  })();
+}
+
+
+/** @deprecated Dùng updateCartLineQuantityOptimistic thay thế */
 export async function updateCartLineQuantity(
   dispatch: AppDispatch,
   isAuthenticated: boolean,
@@ -163,6 +226,7 @@ export async function updateCartLineQuantity(
   return true;
 }
 
+/** @deprecated Dùng removeCartLineOptimistic thay thế */
 export async function removeCartLine(
   dispatch: AppDispatch,
   isAuthenticated: boolean,
@@ -205,9 +269,6 @@ export async function clearCartApi(
   return true;
 }
 
-/**
- * Thêm sản phẩm vào giỏ: gọi API khi đã đăng nhập, luôn cập nhật Redux cho UI.
- */
 export async function addProductToCart(
   dispatch: AppDispatch,
   isAuthenticated: boolean,
@@ -251,13 +312,10 @@ export async function addProductToCart(
     })
   );
 
-  toast.success(
-    "Đã thêm vào giỏ (đăng nhập để đồng bộ với tài khoản)"
-  );
+  toast.success("Đã thêm vào giỏ (đăng nhập để đồng bộ với tài khoản)");
   return true;
 }
 
-/** Thêm từ grid/quick view: lấy biến thể mặc định từ API khi đã đăng nhập. */
 export async function addProductToCartByProductId(
   dispatch: AppDispatch,
   isAuthenticated: boolean,
@@ -266,13 +324,7 @@ export async function addProductToCartByProductId(
   product: CartProductPayload
 ): Promise<boolean> {
   if (!isAuthenticated) {
-    return addProductToCart(
-      dispatch,
-      false,
-      productId,
-      quantity,
-      product
-    );
+    return addProductToCart(dispatch, false, productId, quantity, product);
   }
 
   try {
@@ -284,17 +336,11 @@ export async function addProductToCartByProductId(
     }
     const variant = raw?.variants?.find((v) => v.id === variantId);
     const price = variant?.price ?? product.discountedPrice;
-    return addProductToCart(
-      dispatch,
-      true,
-      variantId,
-      quantity,
-      {
-        ...product,
-        price,
-        discountedPrice: price,
-      }
-    );
+    return addProductToCart(dispatch, true, variantId, quantity, {
+      ...product,
+      price,
+      discountedPrice: price,
+    });
   } catch {
     toast.error("Không tải được thông tin sản phẩm");
     return false;

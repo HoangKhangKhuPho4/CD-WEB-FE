@@ -22,15 +22,15 @@ const OrderSummary = () => {
             <h4 className="font-medium text-dark text-right">Thành tiền</h4>
           </div>
 
-          {cartItems.map((item, key) => (
+          {cartItems.map((item) => (
             <div
-              key={key}
+              key={item.id}
               className="flex items-center justify-between py-5 border-b border-gray-3"
             >
               <p className="text-dark text-sm pr-4">
                 {item.title} × {item.quantity}
               </p>
-              <p className="text-dark text-right whitespace-nowrap">
+              <p className="text-dark text-right whitespace-nowrap tabular-nums">
                 {formatVnd(item.discountedPrice * item.quantity)}
               </p>
             </div>
@@ -38,7 +38,7 @@ const OrderSummary = () => {
 
           <div className="flex items-center justify-between pt-5">
             <p className="font-medium text-lg text-dark">Tổng cộng</p>
-            <p className="font-medium text-lg text-dark text-right">
+            <p className="font-medium text-lg text-dark text-right tabular-nums">
               {formatVnd(totalPrice)}
             </p>
           </div>

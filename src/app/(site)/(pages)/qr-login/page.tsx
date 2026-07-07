@@ -129,14 +129,14 @@ export default function QrLoginPage() {
             {/* Overlay messages */}
             {status === "SCANNED" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-yellow-50/80 backdrop-blur-sm">
-                <div className="text-4xl mb-2">📱</div>
+                <div className="text-4xl mb-2"></div>
                 <p className="font-semibold text-yellow-700 text-sm">Đang chờ xác nhận...</p>
                 <p className="text-yellow-600 text-xs mt-1">Xác nhận trên điện thoại</p>
               </div>
             )}
             {status === "EXPIRED" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-red-50/90 backdrop-blur-sm">
-                <div className="text-4xl mb-2">⏰</div>
+                <div className="text-4xl mb-2"></div>
                 <p className="font-semibold text-red-600 text-sm">Mã QR đã hết hạn</p>
               </div>
             )}
