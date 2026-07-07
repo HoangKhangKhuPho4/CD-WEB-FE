@@ -1,29 +1,18 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch, useAppSelector } from "@/redux/store";
 import Image from "next/image";
 import Link from "next/link";
-import { removeItemFromCart, type CartItem } from "@/redux/features/cart-slice";
-import { formatVnd, removeCartLine } from "@/utils/cartSync";
+import { type CartItem } from "@/redux/features/cart-slice";
+import { formatVnd, removeCartLineOptimistic } from "@/utils/cartSync";
 
 const SingleItem = ({ item }: { item: CartItem }) => {
-  const [updating, setUpdating] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated } = useAppSelector((state) => state.authReducer);
+  const { isAuthenticated } = useAppSelector((s) => s.authReducer);
 
-  const handleRemoveFromCart = async () => {
-    if (updating) return;
-    setUpdating(true);
-    try {
-      if (isAuthenticated) {
-        await removeCartLine(dispatch, true, item.id);
-      } else {
-        dispatch(removeItemFromCart(item.id));
-      }
-    } finally {
-      setUpdating(false);
-    }
+  const handleRemove = () => {
+    removeCartLineOptimistic(dispatch, isAuthenticated, item.id, item);
   };
 
   const thumb =
@@ -54,10 +43,9 @@ const SingleItem = ({ item }: { item: CartItem }) => {
 
       <button
         type="button"
-        disabled={updating}
-        onClick={() => void handleRemoveFromCart()}
+        onClick={handleRemove}
         aria-label="Xóa khỏi giỏ"
-        className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red disabled:opacity-40"
+        className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
       >
         <svg
           className="fill-current"

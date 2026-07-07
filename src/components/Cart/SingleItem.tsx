@@ -1,65 +1,64 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AppDispatch, useAppSelector } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import {
-  removeItemFromCart,
-  updateCartItemQuantity,
-} from "@/redux/features/cart-slice";
-import {
   formatVnd,
-  removeCartLine,
-  updateCartLineQuantity,
+  removeCartLineOptimistic,
+  updateCartLineQuantityOptimistic,
 } from "@/utils/cartSync";
 import type { CartItem } from "@/redux/features/cart-slice";
-
 import Image from "next/image";
 
 const SingleItem = ({ item }: { item: CartItem }) => {
-  const [quantity, setQuantity] = useState(item.quantity);
-  const [updating, setUpdating] = useState(false);
+  const [localQty, setLocalQty] = useState(item.quantity);
+  
+  const confirmedQtyRef = useRef(item.quantity);
+  
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useAppSelector((state) => state.authReducer);
 
   useEffect(() => {
-    setQuantity(item.quantity);
+    setLocalQty(item.quantity);
+    confirmedQtyRef.current = item.quantity;
   }, [item.quantity]);
 
-  const handleRemoveFromCart = async () => {
-    if (updating) return;
-    setUpdating(true);
-    try {
-      if (isAuthenticated) {
-        const ok = await removeCartLine(dispatch, true, item.id);
-        if (!ok) return;
-      } else {
-        dispatch(removeItemFromCart(item.id));
-      }
-    } finally {
-      setUpdating(false);
-    }
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleRemoveFromCart = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    removeCartLineOptimistic(dispatch, isAuthenticated, item.id, item);
   };
 
-  const changeQuantity = async (next: number) => {
-    if (next < 1 || updating) return;
-    setUpdating(true);
-    const prev = quantity;
-    setQuantity(next);
-    try {
-      if (isAuthenticated) {
-        const ok = await updateCartLineQuantity(
-          dispatch,
-          true,
-          item.id,
-          next
-        );
-        if (!ok) setQuantity(prev);
-      } else {
-        dispatch(updateCartItemQuantity({ id: item.id, quantity: next }));
-      }
-    } finally {
-      setUpdating(false);
+  const changeQuantity = (next: number) => {
+    if (next < 1) return;
+
+    const prev = localQty;
+    setLocalQty(next);
+
+    if (!isAuthenticated) {
+      updateCartLineQuantityOptimistic(dispatch, false, item.id, next, prev);
+      confirmedQtyRef.current = next;
+      return;
     }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      updateCartLineQuantityOptimistic(
+        dispatch,
+        true,
+        item.id,
+        next,
+        confirmedQtyRef.current 
+      );
+      confirmedQtyRef.current = next;
+    }, 400);
   };
 
   const thumb = item.imgs?.thumbnails?.[0] || "/images/products/product-1-bg-1.png";
@@ -90,8 +89,8 @@ const SingleItem = ({ item }: { item: CartItem }) => {
         <div className="w-max flex items-center rounded-md border border-gray-3">
           <button
             type="button"
-            disabled={updating || quantity <= 1}
-            onClick={() => changeQuantity(quantity - 1)}
+            disabled={localQty <= 1} 
+            onClick={() => changeQuantity(localQty - 1)}
             aria-label="Giảm số lượng"
             className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue disabled:opacity-40"
           >
@@ -110,16 +109,15 @@ const SingleItem = ({ item }: { item: CartItem }) => {
             </svg>
           </button>
 
-          <span className="flex items-center justify-center w-16 h-11.5 border-x border-gray-4">
-            {quantity}
+          <span className="flex items-center justify-center w-16 h-11.5 border-x border-gray-4 tabular-nums">
+            {localQty}
           </span>
 
           <button
             type="button"
-            disabled={updating}
-            onClick={() => changeQuantity(quantity + 1)}
+            onClick={() => changeQuantity(localQty + 1)}
             aria-label="Tăng số lượng"
-            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue disabled:opacity-40"
+            className="flex items-center justify-center w-11.5 h-11.5 ease-out duration-200 hover:text-blue"
           >
             <svg
               className="fill-current"
@@ -143,16 +141,15 @@ const SingleItem = ({ item }: { item: CartItem }) => {
       </div>
 
       <div className="min-w-[200px]">
-        <p className="text-dark">{formatVnd(item.discountedPrice * quantity)}</p>
+        <p className="text-dark tabular-nums">{formatVnd(item.discountedPrice * localQty)}</p>
       </div>
 
       <div className="min-w-[50px] flex justify-end">
         <button
           type="button"
-          disabled={updating}
-          onClick={() => handleRemoveFromCart()}
+          onClick={handleRemoveFromCart}
           aria-label="Xóa khỏi giỏ"
-          className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red disabled:opacity-40"
+          className="flex items-center justify-center rounded-lg max-w-[38px] w-full h-9.5 bg-gray-2 border border-gray-3 text-dark ease-out duration-200 hover:bg-red-light-6 hover:border-red-light-4 hover:text-red"
         >
           <svg
             className="fill-current"
